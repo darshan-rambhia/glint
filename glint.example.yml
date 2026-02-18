@@ -1,0 +1,58 @@
+# Glint Configuration
+# Copy to glint.yml and update with your settings.
+
+listen: ":3800"
+db_path: "/data/glint.db"
+log_level: "info"
+log_format: "text"            # "text" (default) or "json" (recommended for systemd/journald)
+history_hours: 48
+worker_pool_size: 4
+
+pve:
+  - name: "main"
+    host: "https://192.0.2.10:8006"
+    token_id: "glint@pam!monitor"
+    token_secret: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+    insecure: true
+    poll_interval: "15s"
+    disk_poll_interval: "1h"
+    # ssh:                              # Optional: for CPU temperatures
+    #   host: "192.0.2.10"
+    #   user: "root"
+    #   key_path: "/config/ssh/id_ed25519"
+
+pbs:
+  - name: "main-pbs"
+    host: "https://192.0.2.20:8007"
+    token_id: "glint@pbs!monitor"
+    token_secret: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+    insecure: true
+    datastores: ["homelab"]
+    poll_interval: "5m"
+
+notifications:
+  - type: ntfy
+    url: "http://192.0.2.30:8080"
+    topic: "homelab-alerts"
+  # - type: webhook
+  #   url: "https://hooks.example.com/glint"
+  #   method: "POST"
+  #   headers:
+  #     Authorization: "Bearer xxx"
+
+alerts:
+  node_cpu_high:
+    threshold: 90
+    duration: "5m"
+    severity: "warning"
+  guest_down:
+    grace_period: "2m"
+    severity: "critical"
+  backup_stale:
+    max_age: "36h"
+    severity: "warning"
+  disk_smart_failed:
+    severity: "critical"
+  datastore_full:
+    threshold: 85
+    severity: "warning"

@@ -1,0 +1,71 @@
+version: '3'
+
+tasks:
+  generate:
+    desc: Generate templ templates
+    cmds:
+      - templ generate
+
+  build:
+    desc: Build the glint binary
+    deps: [generate]
+    cmds:
+      - CGO_ENABLED=1 go build -ldflags="-s -w" -o bin/glint ./cmd/glint
+
+  run:
+    desc: Run glint locally
+    deps: [generate]
+    cmds:
+      - go run ./cmd/glint --config glint.yml
+
+  test:
+    desc: Run tests
+    cmds:
+      - go test ./... -v -count=1
+
+  test:race:
+    desc: Run tests with race detector
+    cmds:
+      - go test ./... -v -race -count=1
+
+  test:coverage:
+    desc: Run tests with coverage tracking and threshold enforcement
+    cmds:
+      - go run ./buildscripts/coverage
+
+  lint:
+    desc: Run golangci-lint
+    cmds:
+      - golangci-lint run ./...
+
+  fmt:
+    desc: Format code
+    cmds:
+      - gofmt -w .
+      - templ fmt .
+
+  clean:
+    desc: Clean build artifacts
+    cmds:
+      - rm -rf bin/ target/
+      - find . -name '*_templ.go' -delete
+
+  docker:build:
+    desc: Build Docker image
+    cmds:
+      - docker build -t glint:dev .
+
+  docker:run:
+    desc: Run with Docker Compose
+    cmds:
+      - docker compose up -d
+
+  swagger:
+    desc: Generate Swagger/OpenAPI documentation
+    cmds:
+      - swag init -g cmd/glint/main.go -o docs/swagger
+
+  deps:
+    desc: Download and tidy dependencies
+    cmds:
+      - go mod tidy

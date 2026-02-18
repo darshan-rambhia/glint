@@ -1,0 +1,126 @@
+package templates
+
+import (
+	"fmt"
+	"github.com/darshan-rambhia/glint/internal/cache"
+	"github.com/darshan-rambhia/glint/internal/model"
+)
+
+templ BackupsFragment(snap cache.CacheSnapshot) {
+	<section class="panel">
+		<h2 class="panel-title">PBS BACKUPS</h2>
+		if len(snap.Datastores) == 0 && len(snap.Backups) == 0 {
+			<div class="empty-state">No PBS instances configured.</div>
+		}
+		for pbsInstance, datastores := range snap.Datastores {
+			for _, ds := range datastores {
+				@DatastoreCard(pbsInstance, ds)
+			}
+		}
+		if len(snap.Backups) > 0 {
+			<div class="backup-table-wrapper">
+				<table class="data-table">
+					<thead>
+						<tr>
+							<th>Guest</th>
+							<th>Last Backup</th>
+							<th>Size</th>
+							<th>Age</th>
+							<th>Status</th>
+						</tr>
+					</thead>
+					<tbody>
+						for _, backup := range AllBackupsSorted(snap.Backups) {
+							@BackupRow(backup)
+						}
+					</tbody>
+				</table>
+			</div>
+		}
+		if len(snap.Tasks) > 0 {
+			<div class="tasks-section">
+				<h3 class="sub-title">Recent Tasks</h3>
+				<table class="data-table compact">
+					<thead>
+						<tr>
+							<th>Type</th>
+							<th>ID</th>
+							<th>Started</th>
+							<th>Duration</th>
+							<th>Status</th>
+						</tr>
+					</thead>
+					<tbody>
+						for _, task := range AllTasksSorted(snap.Tasks) {
+							@TaskRow(task)
+						}
+					</tbody>
+				</table>
+			</div>
+		}
+	</section>
+}
+
+templ DatastoreCard(pbsInstance string, ds *model.DatastoreStatus) {
+	<div class="datastore-card">
+		<div class="datastore-header">
+			<span class="datastore-instance">[{ pbsInstance }]</span>
+			<span class="datastore-name">Datastore: { ds.Name }</span>
+			if ds.Error != nil {
+				<span class="status-badge status-critical">ERROR</span>
+			}
+		</div>
+		if ds.Error == nil && ds.TotalBytes != nil && ds.UsedBytes != nil {
+			<div class="metric-row">
+				@ProgressBar(MemPct(Int64Deref(ds.UsedBytes), Int64Deref(ds.TotalBytes)))
+				<span class="metric-value">
+					{ FormatPct(MemPct(Int64Deref(ds.UsedBytes), Int64Deref(ds.TotalBytes))) }
+				</span>
+				<span class="metric-extra">
+					{ FormatBytes(Int64Deref(ds.UsedBytes)) } / { FormatBytes(Int64Deref(ds.TotalBytes)) }
+				</span>
+			</div>
+			if ds.DedupRatio != nil {
+				<span class="datastore-dedup">Dedup: { fmt.Sprintf("%.1fx", Float64Deref(ds.DedupRatio)) }</span>
+			}
+		}
+	</div>
+}
+
+templ BackupRow(backup *model.Backup) {
+	<tr>
+		<td class="mono">{ backup.BackupType }/{ backup.BackupID }</td>
+		<td class="mono">{ FormatTime(backup.BackupTime) }</td>
+		<td class="mono">
+			if backup.SizeBytes != nil {
+				{ FormatBytes(Int64Deref(backup.SizeBytes)) }
+			} else {
+				--
+			}
+		</td>
+		<td class="mono">{ FormatAge(backup.BackupTime) }</td>
+		<td>
+			<span class={ "status-badge", BackupStatusClass(backup.BackupTime, 36) }>
+				{ BackupStatusLabel(backup.BackupTime, 36) }
+			</span>
+		</td>
+	</tr>
+}
+
+templ TaskRow(task *model.PBSTask) {
+	<tr>
+		<td class="mono">{ task.Type }</td>
+		<td class="mono">{ task.ID }</td>
+		<td class="mono">{ FormatTime(task.StartTime) }</td>
+		<td class="mono">{ TaskDuration(task) }</td>
+		<td>
+			<span class={ "status-badge", TaskStatusClass(task.Status) }>
+				if task.Status == "" {
+					RUNNING
+				} else {
+					{ task.Status }
+				}
+			</span>
+		</td>
+	</tr>
+}

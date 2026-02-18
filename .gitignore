@@ -1,0 +1,11 @@
+/glint
+bin/
+dist/
+target/
+*.db
+*_templ.go
+glint.yml
+.env
+*.pem
+*.key
+*.p12

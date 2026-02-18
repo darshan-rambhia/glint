@@ -1,0 +1,33 @@
+package templates
+
+import (
+	"github.com/darshan-rambhia/glint/internal/cache"
+)
+
+templ Dashboard(snap cache.CacheSnapshot) {
+	@Layout("Glint - Infrastructure Monitor") {
+		<header class="header">
+			<div class="header-left">
+				<h1 class="logo">GLINT</h1>
+				<span class="tagline">Infrastructure Monitor</span>
+			</div>
+			<div class="header-right">
+				<span class="last-updated">Last updated: { OldestPoll(snap.LastPoll) }</span>
+			</div>
+		</header>
+		<main class="dashboard">
+			<div id="nodes-section" hx-get="/fragments/nodes" hx-trigger="every 15s" hx-swap="innerHTML">
+				@NodesFragment(snap)
+			</div>
+			<div id="guests-section" hx-get="/fragments/guests" hx-trigger="every 15s" hx-swap="innerHTML">
+				@GuestsFragment(snap)
+			</div>
+			<div id="backups-section" hx-get="/fragments/backups" hx-trigger="every 60s" hx-swap="innerHTML">
+				@BackupsFragment(snap)
+			</div>
+			<div id="disks-section" hx-get="/fragments/disks" hx-trigger="every 300s" hx-swap="innerHTML">
+				@DisksFragment(snap)
+			</div>
+		</main>
+	}
+}

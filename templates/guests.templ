@@ -1,0 +1,72 @@
+package templates
+
+import (
+	"fmt"
+	"github.com/darshan-rambhia/glint/internal/cache"
+	"github.com/darshan-rambhia/glint/internal/model"
+)
+
+templ GuestsFragment(snap cache.CacheSnapshot) {
+	<section class="panel">
+		<div class="panel-header">
+			<h2 class="panel-title">GUESTS</h2>
+			<span class="panel-subtitle">
+				{ func() string {
+					r, s := CountGuestsByStatus(snap.Guests)
+					if s > 0 {
+						return fmt.Sprintf("(%d running, %d stopped)", r, s)
+					}
+					return fmt.Sprintf("(%d running)", r)
+				}() }
+			</span>
+		</div>
+		if len(snap.Guests) == 0 {
+			<div class="empty-state">No guests found.</div>
+		} else {
+			<table class="data-table">
+				<thead>
+					<tr>
+						<th>ID</th>
+						<th>Name</th>
+						<th>Type</th>
+						<th>Status</th>
+						<th>CPU</th>
+						<th>Memory</th>
+						<th>Disk</th>
+					</tr>
+				</thead>
+				<tbody>
+					for _, guest := range SortedGuestList(snap.Guests) {
+						@GuestRow(guest)
+					}
+				</tbody>
+			</table>
+		}
+	</section>
+}
+
+templ GuestRow(guest *model.Guest) {
+	<tr class={ templ.KV("row-stopped", guest.Status != "running") }>
+		<td class="mono">{ fmt.Sprintf("%d", guest.VMID) }</td>
+		<td>{ guest.Name }</td>
+		<td class="mono uppercase">{ guest.Type }</td>
+		<td>
+			<span class={ "status-badge", GuestStatusClass(guest.Status) }>
+				if guest.Status == "running" {
+					UP
+				} else {
+					{ guest.Status }
+				}
+			</span>
+		</td>
+		<td class="mono">
+			if guest.CPUs > 0 {
+				{ FormatPct(guest.CPU / float64(guest.CPUs) * 100) }
+			} else {
+				0%
+			}
+		</td>
+		<td class="mono">{ FormatBytes(guest.Mem) }/{ FormatBytes(guest.MaxMem) }</td>
+		<td class="mono">{ FormatBytes(guest.Disk) }</td>
+	</tr>
+}

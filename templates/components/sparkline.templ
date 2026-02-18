@@ -1,0 +1,29 @@
+package components
+
+import (
+	"github.com/darshan-rambhia/glint/internal/model"
+	"github.com/darshan-rambhia/glint/templates"
+)
+
+// SparklineSVG renders a sparkline as an inline SVG element.
+templ SparklineSVG(points []model.SparklinePoint, label string) {
+	if len(points) == 0 {
+		<svg viewBox="0 0 240 40" preserveAspectRatio="none" class="sparkline-svg">
+			<text x="120" y="24" text-anchor="middle" fill="var(--text-dim)" font-size="11" font-family="var(--font-sans)">No data</text>
+		</svg>
+	} else {
+		<svg viewBox="0 0 240 40" preserveAspectRatio="none" class="sparkline-svg">
+			<polyline
+				points={ templates.SparklinePolyline(points, 240, 36) }
+				fill="none"
+				stroke="var(--accent)"
+				stroke-width="1.5"
+				vector-effect="non-scaling-stroke"
+				transform="translate(0, 2)"
+			/>
+		</svg>
+		if label != "" {
+			<span class="sparkline-label">{ label }</span>
+		}
+	}
+}

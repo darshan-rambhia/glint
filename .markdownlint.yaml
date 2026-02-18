@@ -1,0 +1,23 @@
+# markdownlint configuration
+# https://github.com/DavidAnson/markdownlint
+
+default: true
+
+# Allow long lines (code blocks, URLs, tables)
+MD013:
+  line_length: 200
+  code_blocks: false
+  tables: false
+
+# Allow multiple headings with same content (common in changelogs)
+MD024:
+  siblings_only: true
+
+# Allow inline HTML (needed for some formatting)
+MD033: false
+
+# Allow bare URLs
+MD034: false
+
+# Allow emphasis used instead of heading
+MD036: false

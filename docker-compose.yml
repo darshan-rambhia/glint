@@ -1,0 +1,25 @@
+services:
+  glint:
+    image: ghcr.io/darshan-rambhia/glint:latest
+    container_name: glint
+    restart: unless-stopped
+    ports:
+      - "3800:3800"
+    volumes:
+      - glint-data:/data
+      - ./glint.yml:/etc/glint/glint.yml:ro
+    command: ["glint", "--config", "/etc/glint/glint.yml"]
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+        reservations:
+          memory: 32M
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  glint-data:

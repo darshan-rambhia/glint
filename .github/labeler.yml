@@ -1,0 +1,61 @@
+go:
+  - changed-files:
+      - any-glob-to-any-file:
+          - '**/*.go'
+          - 'go.mod'
+          - 'go.sum'
+
+templates:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'templates/**/*.templ'
+
+ci:
+  - changed-files:
+      - any-glob-to-any-file:
+          - '.github/**'
+          - '.golangci.yml'
+          - 'Taskfile.yml'
+
+docker:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'Dockerfile'
+          - 'docker-compose.yml'
+          - '.goreleaser.yml'
+
+docs:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'docs/**'
+          - 'mkdocs.yml'
+          - '*.md'
+
+config:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'glint.example.yml'
+          - 'internal/config/**'
+
+smart:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'internal/smart/**'
+
+collector:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'internal/collector/**'
+
+alerting:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'internal/alerter/**'
+          - 'internal/notify/**'
+
+tests:
+  - changed-files:
+      - any-glob-to-any-file:
+          - '**/*_test.go'
+          - 'testdata/**'
+          - 'buildscripts/**'

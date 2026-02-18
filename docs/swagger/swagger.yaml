@@ -1,0 +1,241 @@
+basePath: /
+definitions:
+  model.SparklinePoint:
+    properties:
+      ts:
+        type: integer
+      value:
+        type: number
+    type: object
+host: localhost:3800
+info:
+  contact: {}
+  description: Lightweight Proxmox monitoring dashboard API
+  title: Glint API
+  version: "1.0"
+paths:
+  /:
+    get:
+      description: Full HTML dashboard page
+      produces:
+      - text/html
+      responses:
+        "200":
+          description: HTML page
+          schema:
+            type: string
+      summary: Dashboard page
+  /api/sparkline/guest/{instance}/{vmid}:
+    get:
+      description: Returns JSON array of CPU usage data points for a guest
+      parameters:
+      - description: PVE instance name
+        in: path
+        name: instance
+        required: true
+        type: string
+      - description: Guest VMID
+        in: path
+        name: vmid
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.SparklinePoint'
+            type: array
+        "400":
+          description: Invalid VMID
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Guest sparkline data
+  /api/sparkline/node/{instance}/{node}:
+    get:
+      description: Returns JSON array of time-series data points for a node metric
+      parameters:
+      - description: PVE instance name
+        in: path
+        name: instance
+        required: true
+        type: string
+      - description: Node name
+        in: path
+        name: node
+        required: true
+        type: string
+      - default: 24
+        description: Hours of history (1-168)
+        in: query
+        name: hours
+        type: integer
+      - default: cpu
+        description: Metric name (cpu, memory)
+        in: query
+        name: metric
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.SparklinePoint'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Node sparkline data
+  /fragments/backups:
+    get:
+      description: Returns HTML fragment of PBS backup status for htmx
+      produces:
+      - text/html
+      responses:
+        "200":
+          description: HTML fragment
+          schema:
+            type: string
+      summary: Backup status fragment
+  /fragments/disk/{wwn}:
+    get:
+      description: Returns HTML fragment with SMART details for a specific disk
+      parameters:
+      - description: Disk WWN identifier
+        in: path
+        name: wwn
+        required: true
+        type: string
+      produces:
+      - text/html
+      responses:
+        "200":
+          description: HTML fragment
+          schema:
+            type: string
+        "404":
+          description: Disk not found
+          schema:
+            type: string
+      summary: Disk detail fragment
+  /fragments/disks:
+    get:
+      description: Returns HTML fragment of disk health table for htmx
+      produces:
+      - text/html
+      responses:
+        "200":
+          description: HTML fragment
+          schema:
+            type: string
+      summary: Disk health fragment
+  /fragments/guests:
+    get:
+      description: Returns HTML fragment of guest (LXC/QEMU) table for htmx
+      produces:
+      - text/html
+      responses:
+        "200":
+          description: HTML fragment
+          schema:
+            type: string
+      summary: Guest table fragment
+  /fragments/nodes:
+    get:
+      description: Returns HTML fragment of node status cards for htmx
+      produces:
+      - text/html
+      responses:
+        "200":
+          description: HTML fragment
+          schema:
+            type: string
+      summary: Node cards fragment
+  /fragments/sparkline/guest/{instance}/{vmid}:
+    get:
+      description: Returns HTML/SVG sparkline visualization for a guest's CPU usage
+      parameters:
+      - description: PVE instance name
+        in: path
+        name: instance
+        required: true
+        type: string
+      - description: Guest VMID
+        in: path
+        name: vmid
+        required: true
+        type: integer
+      produces:
+      - text/html
+      responses:
+        "200":
+          description: SVG sparkline HTML
+          schema:
+            type: string
+        "400":
+          description: Invalid VMID
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Guest sparkline SVG fragment
+  /fragments/sparkline/node/{instance}/{node}:
+    get:
+      description: Returns HTML/SVG sparkline visualization for a node metric
+      parameters:
+      - description: PVE instance name
+        in: path
+        name: instance
+        required: true
+        type: string
+      - description: Node name
+        in: path
+        name: node
+        required: true
+        type: string
+      - default: 24
+        description: Hours of history (1-168)
+        in: query
+        name: hours
+        type: integer
+      - default: cpu
+        description: Metric name (cpu, memory)
+        in: query
+        name: metric
+        type: string
+      produces:
+      - text/html
+      responses:
+        "200":
+          description: SVG sparkline HTML
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Node sparkline SVG fragment
+  /healthz:
+    get:
+      description: Returns service health status and collector poll times
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Health status
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Health check
+swagger: "2.0"

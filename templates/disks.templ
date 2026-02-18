@@ -1,0 +1,139 @@
+package templates
+
+import (
+	"fmt"
+	"github.com/darshan-rambhia/glint/internal/cache"
+	"github.com/darshan-rambhia/glint/internal/model"
+)
+
+templ DisksFragment(snap cache.CacheSnapshot) {
+	<section class="panel">
+		<h2 class="panel-title">DISK HEALTH (S.M.A.R.T.)</h2>
+		if len(snap.Disks) == 0 {
+			<div class="empty-state">No disks detected yet. SMART data is polled hourly.</div>
+		} else {
+			<table class="data-table">
+				<thead>
+					<tr>
+						<th>Device</th>
+						<th>Model</th>
+						<th>Health</th>
+						<th>Temp</th>
+						<th>Hours</th>
+						<th>Wear</th>
+						<th></th>
+					</tr>
+				</thead>
+				<tbody>
+					for _, disk := range SortedDiskList(snap.Disks) {
+						@DiskRow(disk)
+					}
+				</tbody>
+			</table>
+		}
+	</section>
+}
+
+templ DiskRow(disk *model.Disk) {
+	<tr class={ DiskStatusClass(disk.Status) }>
+		<td class="mono">{ disk.DevPath }</td>
+		<td>{ disk.Model }</td>
+		<td>
+			<span class={ "status-badge", DiskStatusClass(disk.Status) }>
+				{ disk.Health }
+			</span>
+		</td>
+		<td class="mono">{ TempDisplay(disk.Temperature) }</td>
+		<td class="mono">{ HoursDisplay(disk.PowerOnHours) }</td>
+		<td class="mono">{ WearoutDisplay(disk.Wearout) }</td>
+		<td>
+			if len(disk.Attributes) > 0 {
+				<button
+					class="btn-expand"
+					hx-get={ fmt.Sprintf("/fragments/disk/%s", disk.WWN) }
+					hx-target={ fmt.Sprintf("#disk-detail-%s", disk.WWN) }
+					hx-swap="innerHTML"
+					hx-trigger="click">
+					Details
+				</button>
+			}
+		</td>
+	</tr>
+	<tr id={ fmt.Sprintf("disk-detail-%s", disk.WWN) } class="disk-detail-row"></tr>
+}
+
+templ DiskDetail(disk *model.Disk) {
+	<td colspan="7">
+		<div class="disk-detail">
+			<div class="disk-info">
+				<span>[{ disk.Instance }/{ disk.Node }]</span>
+				<span>Serial: { disk.Serial }</span>
+				<span>WWN: { disk.WWN }</span>
+				<span>Size: { FormatBytes(disk.SizeBytes) }</span>
+				<span>Protocol: { disk.Protocol }</span>
+			</div>
+			if len(disk.Attributes) > 0 {
+				<table class="data-table compact attr-table">
+					<thead>
+						<tr>
+							<th>ID</th>
+							<th>Name</th>
+							<th>Value</th>
+							<th>Worst</th>
+							<th>Thresh</th>
+							<th>Raw</th>
+							<th>Risk</th>
+						</tr>
+					</thead>
+					<tbody>
+						for _, attr := range disk.Attributes {
+							@AttributeRow(attr)
+						}
+					</tbody>
+				</table>
+			} else {
+				<p class="text-muted">No SMART attributes available for this disk.</p>
+			}
+		</div>
+	</td>
+}
+
+templ AttributeRow(attr model.SMARTAttribute) {
+	<tr class={ DiskStatusClass(attr.Status) }>
+		<td class="mono">{ fmt.Sprintf("%d", attr.ID) }</td>
+		<td>{ attr.Name }</td>
+		<td class="mono">{ fmt.Sprintf("%d", attr.Value) }</td>
+		<td class="mono">{ fmt.Sprintf("%d", attr.Worst) }</td>
+		<td class="mono">
+			if attr.Threshold >= 0 {
+				{ fmt.Sprintf("%d", attr.Threshold) }
+			} else {
+				--
+			}
+		</td>
+		<td class="mono">{ attr.RawString }</td>
+		<td>
+			if attr.FailureRate != nil {
+				<span class={ "risk-badge", riskClass(attr) }>
+					{ fmt.Sprintf("%.1f%%", *attr.FailureRate * 100) }
+				</span>
+			} else {
+				<span class="risk-badge risk-low">Low</span>
+			}
+		</td>
+	</tr>
+}
+
+func riskClass(attr model.SMARTAttribute) string {
+	if attr.FailureRate == nil {
+		return "risk-low"
+	}
+	rate := *attr.FailureRate
+	if rate >= 0.10 {
+		return "risk-high"
+	}
+	if rate >= 0.05 {
+		return "risk-medium"
+	}
+	return "risk-low"
+}

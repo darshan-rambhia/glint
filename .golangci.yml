@@ -1,0 +1,175 @@
+version: "2"
+
+run:
+  timeout: 5m
+  modules-download-mode: readonly
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  exclusions:
+    paths:
+      - _templ\.go
+
+linters:
+  default: none
+  enable:
+    # Default linters
+    - errcheck
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+    - sloglint
+
+    # Style and correctness
+    - bodyclose        # checks HTTP response body is closed
+    - copyloopvar      # detects loop variable capture issues
+    - durationcheck    # checks for incorrect duration multiplication
+    - errname          # checks error type naming (ErrFoo)
+    - errorlint        # checks error wrapping (fmt.Errorf %w)
+    - exhaustive       # checks switch exhaustiveness for enums
+    - gocheckcompilerdirectives # checks //go: directives
+    - gocritic         # opinionated meta-linter
+    - gosec            # security checks
+    - misspell         # checks common misspellings
+    - nilerr           # checks returning nil instead of error
+    - prealloc         # suggests preallocating slices
+    - predeclared      # checks for shadowing predeclared identifiers
+    - revive           # extensible linter (replaces golint)
+    - rowserrcheck     # checks sql.Rows.Err
+    - sqlclosecheck    # checks sql.Rows/Stmt are closed
+    - testifylint      # checks testify usage patterns
+    - unconvert        # removes unnecessary type conversions
+    - unparam          # reports unused function parameters
+    - wastedassign     # detects wasted assignments
+
+  settings:
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - performance
+      disabled-checks:
+        - hugeParam        # too noisy for structs we pass by value intentionally
+
+    revive:
+      rules:
+        - name: blank-imports
+          disabled: true   # SQLite driver requires blank import
+        - name: context-as-argument
+        - name: context-keys-type
+        - name: dot-imports
+        - name: error-naming
+        - name: error-return
+        - name: error-strings
+        - name: exported
+          disabled: true   # too noisy for internal packages with obvious methods
+        - name: if-return
+        - name: increment-decrement
+        - name: indent-error-flow
+        - name: package-comments
+          disabled: true   # not needed for internal packages
+        - name: range
+        - name: receiver-naming
+        - name: time-naming
+        - name: unexported-return
+        - name: var-declaration
+        - name: var-naming
+
+    gosec:
+      excludes:
+        - G104  # unhandled errors (errcheck already covers this)
+        - G106  # ssh InsecureIgnoreHostKey (intentional for homelab use)
+        - G201  # SQL string formatting (controlled input, not user-supplied)
+        - G204  # subprocess with variable args (coverage tool only)
+        - G301  # directory permissions (0755 is fine for report dirs)
+        - G304  # file path from variable (we need this for config loading)
+        - G306  # file permissions (0644 is fine for coverage data)
+        - G402  # TLS InsecureSkipVerify (intentional for self-signed Proxmox certs)
+        - G602  # slice index out of range (false positive on FormatBytes)
+
+    errorlint:
+      errorf: true
+      errorf-multi: true
+      asserts: true
+      comparison: true
+
+    exhaustive:
+      default-signifies-exhaustive: true
+
+    govet:
+      enable-all: true
+      disable:
+        - fieldalignment  # too noisy, not worth the optimization
+        - shadow           # too noisy, idiomatic Go uses short var decl in if blocks
+
+    misspell:
+      locale: US
+
+    testifylint:
+      enable-all: true
+      disable:
+        - float-compare    # exact float comparisons are fine for known test values
+        - require-error    # assert.Error vs require.Error is a style choice
+
+  exclusions:
+    rules:
+      # Test files can have longer functions and more complexity
+      - path: _test\.go
+        linters:
+          - gosec
+          - unparam
+          - gocritic
+          - errcheck
+          - misspell
+          - prealloc
+          - staticcheck
+          - revive
+
+      # Deferred Close/close calls — error is not actionable
+      - text: "Error return value of .*(Close|close).*is not checked"
+        linters:
+          - errcheck
+
+      # Allow init() in the SQLite driver import file
+      - path: store/store\.go
+        linters:
+          - gochecknoinits
+
+      # Template helpers have many small utility functions
+      - path: templates/helpers\.go
+        linters:
+          - unparam
+          - prealloc
+
+      # Generated templ files — skip entirely
+      - path: _templ\.go
+        linters:
+          - all
+
+      # Build scripts are not production code
+      - path: buildscripts/
+        linters:
+          - gosec
+          - gocritic
+          - govet
+
+      # "cancelled" vs "canceled" — both are valid English spellings
+      - text: "cancelled.*is a misspelling"
+        linters:
+          - misspell
+
+      # Functions that return nil error for now but may return errors in future
+      - text: "result .* is always nil"
+        linters:
+          - unparam
+
+      # "api" is a clear, conventional package name
+      - text: "avoid meaningless package names"
+        linters:
+          - revive
+
+output:
+  max-issues-per-linter: 50
+  max-same-issues: 10

@@ -1,0 +1,55 @@
+name: Deploy Docs
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.26'
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install tools
+        run: |
+          pip install mkdocs-material mike
+          go install github.com/a-h/templ/cmd/templ@latest
+          go install github.com/swaggo/swag/cmd/swag@latest
+
+      - name: Generate templ + swagger
+        run: |
+          templ generate
+          swag init -g cmd/glint/main.go -o docs/swagger
+
+      - name: Configure git for mike
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Deploy versioned docs
+        env:
+          VERSION: ${{ github.ref_name }}
+        run: |
+          mike deploy --push --update-aliases "${VERSION}" latest
+          mike set-default --push latest

@@ -1,0 +1,38 @@
+# Repo setup — calls the shared workflow from github-management.
+# Runs manually via workflow_dispatch. Customize inputs for this repo.
+
+name: Repo Setup
+
+on:
+  workflow_dispatch:
+
+# The reusable workflow declares its own permissions,
+# but the caller must also grant them.
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  setup:
+    uses: darshan-rambhia/github-management/.github/workflows/repo-setup.yml@main
+    secrets:
+      ADMIN_TOKEN: ${{ secrets.ADMIN_TOKEN }}  # PAT with repo admin scope
+    with:
+      has_discussions: false
+      has_wiki: false
+      has_projects: false
+      allow_merge_commit: false
+      allow_squash_merge: true
+      allow_rebase_merge: true
+      allow_auto_merge: true
+      delete_branch_on_merge: true
+      squash_merge_commit_title: "PR_TITLE"
+      squash_merge_commit_message: "BLANK"
+      enable_branch_protection: true
+      required_checks: "lint,test,build"
+      dismiss_stale_reviews: true
+      require_conversation_resolution: true
+      require_linear_history: true
+      enable_code_scanning: true
+      default_workflow_permissions: "read"
+      actions_can_approve_prs: false
