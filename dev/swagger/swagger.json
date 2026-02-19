@@ -1,0 +1,363 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "Lightweight Proxmox monitoring dashboard API",
+        "title": "Glint API",
+        "contact": {},
+        "version": "1.0"
+    },
+    "host": "localhost:3800",
+    "basePath": "/",
+    "paths": {
+        "/": {
+            "get": {
+                "description": "Full HTML dashboard page",
+                "produces": [
+                    "text/html"
+                ],
+                "summary": "Dashboard page",
+                "responses": {
+                    "200": {
+                        "description": "HTML page",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/sparkline/guest/{instance}/{vmid}": {
+            "get": {
+                "description": "Returns JSON array of CPU usage data points for a guest",
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "Guest sparkline data",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "PVE instance name",
+                        "name": "instance",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Guest VMID",
+                        "name": "vmid",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.SparklinePoint"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid VMID",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/sparkline/node/{instance}/{node}": {
+            "get": {
+                "description": "Returns JSON array of time-series data points for a node metric",
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "Node sparkline data",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "PVE instance name",
+                        "name": "instance",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Node name",
+                        "name": "node",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "default": 24,
+                        "description": "Hours of history (1-168)",
+                        "name": "hours",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "default": "cpu",
+                        "description": "Metric name (cpu, memory)",
+                        "name": "metric",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.SparklinePoint"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/fragments/backups": {
+            "get": {
+                "description": "Returns HTML fragment of PBS backup status for htmx",
+                "produces": [
+                    "text/html"
+                ],
+                "summary": "Backup status fragment",
+                "responses": {
+                    "200": {
+                        "description": "HTML fragment",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/fragments/disk/{wwn}": {
+            "get": {
+                "description": "Returns HTML fragment with SMART details for a specific disk",
+                "produces": [
+                    "text/html"
+                ],
+                "summary": "Disk detail fragment",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Disk WWN identifier",
+                        "name": "wwn",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "HTML fragment",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "Disk not found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/fragments/disks": {
+            "get": {
+                "description": "Returns HTML fragment of disk health table for htmx",
+                "produces": [
+                    "text/html"
+                ],
+                "summary": "Disk health fragment",
+                "responses": {
+                    "200": {
+                        "description": "HTML fragment",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/fragments/guests": {
+            "get": {
+                "description": "Returns HTML fragment of guest (LXC/QEMU) table for htmx",
+                "produces": [
+                    "text/html"
+                ],
+                "summary": "Guest table fragment",
+                "responses": {
+                    "200": {
+                        "description": "HTML fragment",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/fragments/nodes": {
+            "get": {
+                "description": "Returns HTML fragment of node status cards for htmx",
+                "produces": [
+                    "text/html"
+                ],
+                "summary": "Node cards fragment",
+                "responses": {
+                    "200": {
+                        "description": "HTML fragment",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/fragments/sparkline/guest/{instance}/{vmid}": {
+            "get": {
+                "description": "Returns HTML/SVG sparkline visualization for a guest's CPU usage",
+                "produces": [
+                    "text/html"
+                ],
+                "summary": "Guest sparkline SVG fragment",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "PVE instance name",
+                        "name": "instance",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Guest VMID",
+                        "name": "vmid",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "SVG sparkline HTML",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid VMID",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/fragments/sparkline/node/{instance}/{node}": {
+            "get": {
+                "description": "Returns HTML/SVG sparkline visualization for a node metric",
+                "produces": [
+                    "text/html"
+                ],
+                "summary": "Node sparkline SVG fragment",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "PVE instance name",
+                        "name": "instance",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Node name",
+                        "name": "node",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "default": 24,
+                        "description": "Hours of history (1-168)",
+                        "name": "hours",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "default": "cpu",
+                        "description": "Metric name (cpu, memory)",
+                        "name": "metric",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "SVG sparkline HTML",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/healthz": {
+            "get": {
+                "description": "Returns service health status and collector poll times",
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "Health check",
+                "responses": {
+                    "200": {
+                        "description": "Health status",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "model.SparklinePoint": {
+            "type": "object",
+            "properties": {
+                "ts": {
+                    "type": "integer"
+                },
+                "value": {
+                    "type": "number"
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,1644 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Lightweight Proxmox monitoring dashboard">
+      
+      
+      
+        <link rel="canonical" href="https://darshan-rambhia.github.io/glint/dev/architecture/">
+      
+      
+        <link rel="prev" href="../logging/">
+      
+      
+        <link rel="next" href="../api/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.2">
+    
+    
+      
+        <title>Architecture - Glint</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="amber">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#architecture" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="Glint" class="md-header__button md-logo" aria-label="Glint" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Glint
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Architecture
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="amber"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="amber"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/darshan-rambhia/glint" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    darshan-rambhia/glint
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Glint" class="md-nav__button md-logo" aria-label="Glint" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Glint
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/darshan-rambhia/glint" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    darshan-rambhia/glint
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../deployment/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Deployment
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../logging/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Logging
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#system-overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        System Overview
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#data-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Data Flow
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#key-design-decisions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Key Design Decisions
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Key Design Decisions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#from-pulse" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        From Pulse
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#from-scrutiny" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        From Scrutiny
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#project-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Project Structure
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#collector-engine" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Collector Engine
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Collector Engine">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#worker-pool" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Worker Pool
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pve-poll-cycle" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PVE Poll Cycle
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pbs-poll-cycle" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PBS Poll Cycle
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#polling-intervals" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Polling Intervals
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#in-memory-cache" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        In-Memory Cache
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sqlite-schema" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SQLite Schema
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="SQLite Schema">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#time-series-tables" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Time-Series Tables
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pruner" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pruner
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#smart-health-assessment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        S.M.A.R.T. Health Assessment
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="S.M.A.R.T. Health Assessment">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#status-bitfield" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Status Bitfield
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#evaluation-order" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Evaluation Order
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#nvme-handling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        NVMe Handling
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#http-routes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        HTTP Routes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#alerting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Alerting
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Alerting">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#built-in-rules" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Built-in Rules
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#notification-providers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Notification Providers
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#lifecycle-management" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Lifecycle Management
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../testing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Testing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#system-overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        System Overview
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#data-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Data Flow
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#key-design-decisions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Key Design Decisions
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Key Design Decisions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#from-pulse" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        From Pulse
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#from-scrutiny" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        From Scrutiny
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#project-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Project Structure
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#collector-engine" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Collector Engine
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Collector Engine">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#worker-pool" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Worker Pool
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pve-poll-cycle" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PVE Poll Cycle
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pbs-poll-cycle" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PBS Poll Cycle
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#polling-intervals" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Polling Intervals
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#in-memory-cache" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        In-Memory Cache
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sqlite-schema" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SQLite Schema
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="SQLite Schema">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#time-series-tables" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Time-Series Tables
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pruner" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pruner
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#smart-health-assessment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        S.M.A.R.T. Health Assessment
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="S.M.A.R.T. Health Assessment">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#status-bitfield" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Status Bitfield
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#evaluation-order" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Evaluation Order
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#nvme-handling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        NVMe Handling
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#http-routes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        HTTP Routes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#alerting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Alerting
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Alerting">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#built-in-rules" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Built-in Rules
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#notification-providers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Notification Providers
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#lifecycle-management" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Lifecycle Management
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="architecture">Architecture<a class="headerlink" href="#architecture" title="Permanent link">&para;</a></h1>
+<p>Glint is a single Go binary that polls Proxmox APIs, caches results in memory, persists history to SQLite, and serves a server-rendered dashboard via htmx.</p>
+<h2 id="system-overview">System Overview<a class="headerlink" href="#system-overview" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>                      Browser (htmx polling every 15s)
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>                              |
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>                        HTTPS (reverse proxy)
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>                              |
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>                  +-----------+-----------+
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>                  |         Glint         |
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>                  |   Go binary (Docker)  |
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>                  |                       |
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>                  |  templ HTML handlers  |
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>                  |         |             |
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>                  |  Collector Engine     |
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>                  |  (worker pool)        |
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>                  |         |             |
+<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>                  |  In-Memory Cache      |
+<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>                  |  (sync.RWMutex)       |
+<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>                  |         |             |
+<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>                  |  SQLite               |
+<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>                  |  (metadata + history) |
+<a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>                  +-----------+-----------+
+<a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>                   /          |          \
+<a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>        PVE Instance 1   PVE Instance 2   PBS Instance 1
+<a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>        ├─ Node A        ├─ Node C        ├─ Datastore X
+<a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a>        │  ├─ CTs/VMs    │  ├─ CTs/VMs    └─ Datastore Y
+<a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a>        │  └─ Disks      │  └─ Disks
+<a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a>        └─ Node B        └─ Node D
+<a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a>                                              ntfy (optional)
+</code></pre></div>
+<hr />
+<h2 id="data-flow">Data Flow<a class="headerlink" href="#data-flow" title="Permanent link">&para;</a></h2>
+<ol>
+<li><strong>Collector goroutines</strong> (one per PVE/PBS instance) submit API calls to a <strong>bounded worker pool</strong></li>
+<li>Each collector updates the <strong>in-memory cache</strong> and appends snapshots to <strong>SQLite</strong></li>
+<li><strong>HTTP handlers</strong> read from cache snapshots (lock-free for consumers)</li>
+<li><strong>htmx</strong> polls fragment endpoints every 15s, swapping HTML in-place</li>
+<li><strong>Alerter goroutine</strong> evaluates cache state against rules, sends to ntfy with deduplication</li>
+</ol>
+<hr />
+<h2 id="key-design-decisions">Key Design Decisions<a class="headerlink" href="#key-design-decisions" title="Permanent link">&para;</a></h2>
+<h3 id="from-pulse">From Pulse<a class="headerlink" href="#from-pulse" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Instance + Node hierarchy</strong> --- each PVE config entry is an "instance" (standalone or cluster). Nodes are auto-discovered via <code>GET /nodes</code>. Guests are scoped by cluster name to prevent duplicates.</li>
+<li><strong>Per-instance collectors with worker pool</strong> --- all API calls go through a bounded worker pool (<code>chan struct{}</code> semaphore, default 4 workers) to cap memory and concurrent HTTP connections.</li>
+<li><strong>Snapshot-based cache</strong> --- the cache exposes deep-copy snapshots so HTTP handlers never hold locks. Uses <code>sync.RWMutex</code> (not <code>sync.Map</code>) for atomic cross-key consistency.</li>
+</ul>
+<h3 id="from-scrutiny">From Scrutiny<a class="headerlink" href="#from-scrutiny" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>WWN-based disk identity</strong> --- disks are identified by World Wide Name (globally unique, survives reboots and cable changes), not <code>/dev/sdX</code>.</li>
+<li><strong>Backblaze-derived SMART thresholds</strong> --- individual attributes are evaluated against real-world failure rate data from Backblaze's public hard drive statistics.</li>
+<li><strong>Protocol-aware SMART parsing</strong> --- ATA, NVMe, and SCSI each have different data models, parsed separately.</li>
+</ul>
+<hr />
+<h2 id="project-structure">Project Structure<a class="headerlink" href="#project-structure" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>cmd/glint/main.go              Entry point, wiring, signal handling
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>internal/
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>  api/                         HTTP handlers + htmx fragments
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>    handlers.go                Route registration + fragment handlers
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>    middleware.go              Logging, recovery
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>  collector/                   Data collection from Proxmox APIs
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>    collector.go               Collector interface + runner loop
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>    backup.go                  BackupCollector interface
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>    errors.go                  RetryableError, behavior-based error types
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>    pve.go                     PVE client (nodes, guests, disks, SMART)
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>    pbs.go                     PBS client (datastores, snapshots, tasks)
+<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>    temperature.go             Optional SSH-based temp polling
+<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>  smart/                       S.M.A.R.T. health assessment
+<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>    evaluate.go                Attribute status evaluation
+<a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>    thresholds.go              Backblaze failure rate lookup tables
+<a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a>    ata.go                     ATA attribute parsing
+<a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a>    nvme.go                    NVMe text field parsing
+<a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a>  store/                       SQLite persistence
+<a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a>    store.go                   Repository (insert, query, migrate)
+<a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a>    migrations.go              Embedded schema
+<a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a>    pruner.go                  Retention cleanup
+<a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a>  cache/                       Thread-safe in-memory state
+<a id="__codelineno-1-23" name="__codelineno-1-23" href="#__codelineno-1-23"></a>    cache.go                   Multi-instance cache with snapshots
+<a id="__codelineno-1-24" name="__codelineno-1-24" href="#__codelineno-1-24"></a>  alerter/                     Alert rule engine
+<a id="__codelineno-1-25" name="__codelineno-1-25" href="#__codelineno-1-25"></a>    alerter.go                 Rule evaluation + deduplication
+<a id="__codelineno-1-26" name="__codelineno-1-26" href="#__codelineno-1-26"></a>    templates.go               Default message templates
+<a id="__codelineno-1-27" name="__codelineno-1-27" href="#__codelineno-1-27"></a>  notify/                      Notification providers
+<a id="__codelineno-1-28" name="__codelineno-1-28" href="#__codelineno-1-28"></a>    provider.go                Provider interface + Notification struct
+<a id="__codelineno-1-29" name="__codelineno-1-29" href="#__codelineno-1-29"></a>    ntfy.go                    ntfy provider
+<a id="__codelineno-1-30" name="__codelineno-1-30" href="#__codelineno-1-30"></a>    webhook.go                 Generic webhook provider
+<a id="__codelineno-1-31" name="__codelineno-1-31" href="#__codelineno-1-31"></a>  config/                      Configuration loading
+<a id="__codelineno-1-32" name="__codelineno-1-32" href="#__codelineno-1-32"></a>    config.go                  YAML + env var parsing
+<a id="__codelineno-1-33" name="__codelineno-1-33" href="#__codelineno-1-33"></a>  model/                       Shared domain types
+<a id="__codelineno-1-34" name="__codelineno-1-34" href="#__codelineno-1-34"></a>    model.go                   Node, Guest, Disk, Backup, etc.
+<a id="__codelineno-1-35" name="__codelineno-1-35" href="#__codelineno-1-35"></a>templates/                     templ HTML templates
+<a id="__codelineno-1-36" name="__codelineno-1-36" href="#__codelineno-1-36"></a>  layout.templ                 Base HTML shell
+<a id="__codelineno-1-37" name="__codelineno-1-37" href="#__codelineno-1-37"></a>  dashboard.templ              Main page
+<a id="__codelineno-1-38" name="__codelineno-1-38" href="#__codelineno-1-38"></a>  nodes.templ                  Node cards
+<a id="__codelineno-1-39" name="__codelineno-1-39" href="#__codelineno-1-39"></a>  guests.templ                 Guest table
+<a id="__codelineno-1-40" name="__codelineno-1-40" href="#__codelineno-1-40"></a>  backups.templ                PBS backup panel
+<a id="__codelineno-1-41" name="__codelineno-1-41" href="#__codelineno-1-41"></a>  disks.templ                  Disk health table
+<a id="__codelineno-1-42" name="__codelineno-1-42" href="#__codelineno-1-42"></a>  disk_detail.templ            Expanded SMART attributes
+<a id="__codelineno-1-43" name="__codelineno-1-43" href="#__codelineno-1-43"></a>  components/                  Reusable UI components
+<a id="__codelineno-1-44" name="__codelineno-1-44" href="#__codelineno-1-44"></a>static/                        CSS + htmx.min.js
+</code></pre></div>
+<hr />
+<h2 id="collector-engine">Collector Engine<a class="headerlink" href="#collector-engine" title="Permanent link">&para;</a></h2>
+<p>Each PVE/PBS instance gets its own collector goroutine. All collectors share a single worker pool that bounds concurrent API calls.</p>
+<h3 id="worker-pool">Worker Pool<a class="headerlink" href="#worker-pool" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kd">type</span><span class="w"> </span><span class="nx">WorkerPool</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">    </span><span class="nx">sem</span><span class="w"> </span><span class="kd">chan</span><span class="w"> </span><span class="kd">struct</span><span class="p">{}</span><span class="w">  </span><span class="c1">// buffered channel as semaphore</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="p">}</span>
+</code></pre></div>
+<p>Default: 4 workers. Configurable via <code>worker_pool_size</code>. When polling 4 nodes in parallel, only 4 HTTP requests fly at once --- prevents unbounded goroutine spawning.</p>
+<h3 id="pve-poll-cycle">PVE Poll Cycle<a class="headerlink" href="#pve-poll-cycle" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>1. GET /nodes → discover/update node list
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>2. For each online node (fan out via worker pool):
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>   a. GET /nodes/{node}/status → host metrics
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>   b. GET /nodes/{node}/lxc → containers
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>   c. GET /nodes/{node}/qemu → VMs
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>   d. If disk poll due (&gt;1h since last):
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>      - GET /nodes/{node}/disks/list → disk inventory
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>      - For each disk: GET /nodes/{node}/disks/smart → SMART data
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>3. Merge results, dedup guests by cluster_id
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>4. Update cache + write to SQLite
+</code></pre></div>
+<h3 id="pbs-poll-cycle">PBS Poll Cycle<a class="headerlink" href="#pbs-poll-cycle" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>1. GET /status/datastore-usage → all datastores
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>2. For each monitored datastore:
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>   a. GET /admin/datastore/{store}/snapshots → backup snapshots
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>3. GET /nodes/localhost/tasks → recent tasks
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>4. Update cache + write to SQLite
+</code></pre></div>
+<h3 id="polling-intervals">Polling Intervals<a class="headerlink" href="#polling-intervals" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Data</th>
+<th>Interval</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Node + guest metrics</td>
+<td>15s</td>
+<td>Fan out across nodes in parallel</td>
+</tr>
+<tr>
+<td>S.M.A.R.T. disk data</td>
+<td>1h</td>
+<td>Slow operation (1-5s per disk)</td>
+</tr>
+<tr>
+<td>PBS backups + tasks</td>
+<td>5m</td>
+<td></td>
+</tr>
+<tr>
+<td>Node discovery</td>
+<td>5m</td>
+<td>Within PVE collector</td>
+</tr>
+<tr>
+<td>SSH temperatures</td>
+<td>60s</td>
+<td>Graceful fallback if unavailable</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="in-memory-cache">In-Memory Cache<a class="headerlink" href="#in-memory-cache" title="Permanent link">&para;</a></h2>
+<p>The cache stores the latest state from all collectors. HTTP handlers read <strong>snapshots</strong> (deep copies) so they never hold locks during template rendering.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kd">type</span><span class="w"> </span><span class="nx">Cache</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">    </span><span class="nx">mu</span><span class="w"> </span><span class="nx">sync</span><span class="p">.</span><span class="nx">RWMutex</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">    </span><span class="nx">Nodes</span><span class="w">      </span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="o">*</span><span class="nx">Node</span><span class="w">        </span><span class="c1">// [instance][node]</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">    </span><span class="nx">Guests</span><span class="w">     </span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kd">map</span><span class="p">[</span><span class="kt">int</span><span class="p">]</span><span class="o">*</span><span class="nx">Guest</span><span class="w">           </span><span class="c1">// [cluster_id][vmid]</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">    </span><span class="nx">Disks</span><span class="w">      </span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="o">*</span><span class="nx">Disk</span><span class="w">                    </span><span class="c1">// [wwn]</span>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">    </span><span class="nx">Datastores</span><span class="w"> </span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="o">*</span><span class="nx">DatastoreStatus</span>
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="w">    </span><span class="nx">Backups</span><span class="w">    </span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="o">*</span><span class="nx">Backup</span>
+<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="w">    </span><span class="nx">Tasks</span><span class="w">      </span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">][]</span><span class="o">*</span><span class="nx">PBSTask</span>
+<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="w">    </span><span class="nx">LastPoll</span><span class="w">   </span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="nx">time</span><span class="p">.</span><span class="nx">Time</span>
+<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="p">}</span>
+</code></pre></div>
+<p>Why <code>sync.RWMutex</code> over <code>sync.Map</code>: rendering a dashboard page requires consistent data across nodes, guests, and disks simultaneously. <code>sync.Map</code> provides no cross-key consistency guarantees.</p>
+<hr />
+<h2 id="sqlite-schema">SQLite Schema<a class="headerlink" href="#sqlite-schema" title="Permanent link">&para;</a></h2>
+<h3 id="time-series-tables">Time-Series Tables<a class="headerlink" href="#time-series-tables" title="Permanent link">&para;</a></h3>
+<p>All time-series tables use <code>WITHOUT ROWID</code> with <code>ts</code>-leading composite primary keys. This makes them clustered B-trees ordered by time --- ideal for range queries and pruning.</p>
+<table>
+<thead>
+<tr>
+<th>Table</th>
+<th>Retention</th>
+<th>Primary Key</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>node_snapshots</code></td>
+<td>48h</td>
+<td><code>(ts, instance, node)</code></td>
+</tr>
+<tr>
+<td><code>guest_snapshots</code></td>
+<td>48h</td>
+<td><code>(ts, instance, vmid)</code></td>
+</tr>
+<tr>
+<td><code>smart_snapshots</code></td>
+<td>30d</td>
+<td><code>(ts, wwn)</code></td>
+</tr>
+<tr>
+<td><code>backup_snapshots</code></td>
+<td>7d</td>
+<td><code>(ts, pbs_instance, backup_id, backup_time)</code></td>
+</tr>
+<tr>
+<td><code>datastore_snapshots</code></td>
+<td>7d</td>
+<td><code>(ts, pbs_instance, store_name)</code></td>
+</tr>
+<tr>
+<td><code>alert_log</code></td>
+<td>30d</td>
+<td><code>(id)</code> autoincrement</td>
+</tr>
+</tbody>
+</table>
+<h3 id="pruner">Pruner<a class="headerlink" href="#pruner" title="Permanent link">&para;</a></h3>
+<p>An hourly goroutine deletes rows older than the retention period. The <code>ts</code>-leading PK means <code>DELETE FROM X WHERE ts &lt; ?</code> is a fast range scan on the clustered index.</p>
+<hr />
+<h2 id="smart-health-assessment">S.M.A.R.T. Health Assessment<a class="headerlink" href="#smart-health-assessment" title="Permanent link">&para;</a></h2>
+<p>Disk health uses a multi-level evaluation inspired by Scrutiny:</p>
+<h3 id="status-bitfield">Status Bitfield<a class="headerlink" href="#status-bitfield" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Bit</th>
+<th>Value</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td><code>StatusPassed</code></td>
+<td>All checks passed</td>
+</tr>
+<tr>
+<td>1</td>
+<td><code>StatusFailedSmart</code></td>
+<td>Manufacturer SMART says <code>FAILING_NOW</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>StatusWarnScrutiny</code></td>
+<td>Backblaze data suggests elevated risk</td>
+</tr>
+<tr>
+<td>4</td>
+<td><code>StatusFailedScrutiny</code></td>
+<td>Backblaze data suggests high failure probability</td>
+</tr>
+<tr>
+<td>8</td>
+<td><code>StatusUnknown</code></td>
+<td>Disk disappeared / unreachable</td>
+</tr>
+<tr>
+<td>16</td>
+<td><code>StatusInternalError</code></td>
+<td>Parse failure, API timeout</td>
+</tr>
+</tbody>
+</table>
+<h3 id="evaluation-order">Evaluation Order<a class="headerlink" href="#evaluation-order" title="Permanent link">&para;</a></h3>
+<ol>
+<li>Manufacturer SMART says <code>FAILING_NOW</code> → <code>StatusFailedSmart</code></li>
+<li><code>IN_THE_PAST</code> → <code>StatusWarnScrutiny</code></li>
+<li>Look up raw value in Backblaze thresholds:<ul>
+<li>Critical attribute (IDs 5, 10, 187, 188, 196, 197, 198) + failure rate &gt;= 10% → <code>StatusFailedScrutiny</code></li>
+<li>Non-critical + failure rate &gt;= 20% → <code>StatusFailedScrutiny</code></li>
+<li>Non-critical + failure rate &gt;= 10% → <code>StatusWarnScrutiny</code></li>
+</ul>
+</li>
+<li>Device status = bitwise OR of all attribute statuses</li>
+</ol>
+<h3 id="nvme-handling">NVMe Handling<a class="headerlink" href="#nvme-handling" title="Permanent link">&para;</a></h3>
+<p>NVMe drives don't return ATA-style attributes. Glint parses the raw <code>smartctl</code> text output for NVMe-specific fields (<code>critical_warning</code>, <code>available_spare</code>, <code>percentage_used</code>, <code>media_errors</code>, etc.) and applies NVMe-specific thresholds.</p>
+<hr />
+<h2 id="http-routes">HTTP Routes<a class="headerlink" href="#http-routes" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Route</th>
+<th>Type</th>
+<th>Refresh</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GET /</code></td>
+<td>Full page</td>
+<td>---</td>
+<td>Dashboard shell</td>
+</tr>
+<tr>
+<td><code>GET /fragments/nodes</code></td>
+<td>htmx</td>
+<td>15s</td>
+<td>All node cards with sparklines</td>
+</tr>
+<tr>
+<td><code>GET /fragments/guests</code></td>
+<td>htmx</td>
+<td>15s</td>
+<td>Guest table (all instances)</td>
+</tr>
+<tr>
+<td><code>GET /fragments/backups</code></td>
+<td>htmx</td>
+<td>60s</td>
+<td>PBS backup status + tasks</td>
+</tr>
+<tr>
+<td><code>GET /fragments/disks</code></td>
+<td>htmx</td>
+<td>300s</td>
+<td>S.M.A.R.T. health (all nodes)</td>
+</tr>
+<tr>
+<td><code>GET /fragments/disk/{wwn}</code></td>
+<td>htmx</td>
+<td>on-click</td>
+<td>Expanded attributes for one disk</td>
+</tr>
+<tr>
+<td><code>GET /api/sparkline/node/{instance}/{node}</code></td>
+<td>JSON</td>
+<td>on-demand</td>
+<td>Node sparkline data</td>
+</tr>
+<tr>
+<td><code>GET /api/sparkline/guest/{instance}/{vmid}</code></td>
+<td>JSON</td>
+<td>on-demand</td>
+<td>Guest sparkline data</td>
+</tr>
+<tr>
+<td><code>GET /healthz</code></td>
+<td>JSON</td>
+<td>---</td>
+<td>Health check</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="alerting">Alerting<a class="headerlink" href="#alerting" title="Permanent link">&para;</a></h2>
+<p>The alerter goroutine evaluates the cache state against configured rules on each poll cycle. Alerts are deduplicated with per-rule cooldowns to prevent notification storms.</p>
+<h3 id="built-in-rules">Built-in Rules<a class="headerlink" href="#built-in-rules" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Alert</th>
+<th>Default Condition</th>
+<th>Cooldown</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Node CPU high</td>
+<td>&gt; 90% for 5min</td>
+<td>1h</td>
+</tr>
+<tr>
+<td>Node offline</td>
+<td>status != "online"</td>
+<td>30min</td>
+</tr>
+<tr>
+<td>Guest down</td>
+<td>not running for 2min</td>
+<td>30min</td>
+</tr>
+<tr>
+<td>Backup stale</td>
+<td>last backup &gt; 36h</td>
+<td>6h</td>
+</tr>
+<tr>
+<td>Backup failed</td>
+<td>PBS task error</td>
+<td>1h</td>
+</tr>
+<tr>
+<td>Disk SMART failed</td>
+<td>manufacturer failure</td>
+<td>6h</td>
+</tr>
+<tr>
+<td>Datastore full</td>
+<td>&gt; 85% used</td>
+<td>6h</td>
+</tr>
+</tbody>
+</table>
+<h3 id="notification-providers">Notification Providers<a class="headerlink" href="#notification-providers" title="Permanent link">&para;</a></h3>
+<p>Providers implement a common interface:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kd">type</span><span class="w"> </span><span class="nx">Provider</span><span class="w"> </span><span class="kd">interface</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">    </span><span class="nx">Name</span><span class="p">()</span><span class="w"> </span><span class="kt">string</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">    </span><span class="nx">Send</span><span class="p">(</span><span class="nx">ctx</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span><span class="w"> </span><span class="nx">n</span><span class="w"> </span><span class="nx">Notification</span><span class="p">)</span><span class="w"> </span><span class="kt">error</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="p">}</span>
+</code></pre></div>
+<p>Built-in providers: <strong>ntfy</strong> (with priority mapping and tags) and <strong>webhook</strong> (generic JSON POST to any URL).</p>
+<hr />
+<h2 id="lifecycle-management">Lifecycle Management<a class="headerlink" href="#lifecycle-management" title="Permanent link">&para;</a></h2>
+<p>All goroutines accept a <code>context.Context</code> and exit when cancelled. The main function uses <code>errgroup</code> to manage the lifecycle:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nx">g</span><span class="p">,</span><span class="w"> </span><span class="nx">ctx</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">errgroup</span><span class="p">.</span><span class="nx">WithContext</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="nx">g</span><span class="p">.</span><span class="nx">Go</span><span class="p">(</span><span class="kd">func</span><span class="p">()</span><span class="w"> </span><span class="kt">error</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="nx">pveCollector</span><span class="p">.</span><span class="nx">Run</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span><span class="w"> </span><span class="p">})</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="nx">g</span><span class="p">.</span><span class="nx">Go</span><span class="p">(</span><span class="kd">func</span><span class="p">()</span><span class="w"> </span><span class="kt">error</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="nx">pbsCollector</span><span class="p">.</span><span class="nx">Run</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span><span class="w"> </span><span class="p">})</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="nx">g</span><span class="p">.</span><span class="nx">Go</span><span class="p">(</span><span class="kd">func</span><span class="p">()</span><span class="w"> </span><span class="kt">error</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="nx">pruner</span><span class="p">.</span><span class="nx">Run</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span><span class="w"> </span><span class="p">})</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="nx">g</span><span class="p">.</span><span class="nx">Go</span><span class="p">(</span><span class="kd">func</span><span class="p">()</span><span class="w"> </span><span class="kt">error</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="nx">server</span><span class="p">.</span><span class="nx">Run</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span><span class="w"> </span><span class="p">})</span>
+</code></pre></div>
+<p>Graceful shutdown on <code>SIGINT</code>/<code>SIGTERM</code>: collectors stop polling, in-flight requests complete, SQLite is closed cleanly.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.tracking", "navigation.sections", "navigation.expand", "navigation.top", "content.code.copy", "content.code.annotate", "search.suggest", "search.highlight"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

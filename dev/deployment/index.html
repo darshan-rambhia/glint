@@ -1,0 +1,2108 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Lightweight Proxmox monitoring dashboard">
+      
+      
+      
+        <link rel="canonical" href="https://darshan-rambhia.github.io/glint/dev/deployment/">
+      
+      
+        <link rel="prev" href="../configuration/">
+      
+      
+        <link rel="next" href="../logging/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.2">
+    
+    
+      
+        <title>Deployment - Glint</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="amber">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#deployment" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="Glint" class="md-header__button md-logo" aria-label="Glint" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Glint
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Deployment
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="amber"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="amber"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/darshan-rambhia/glint" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    darshan-rambhia/glint
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Glint" class="md-nav__button md-logo" aria-label="Glint" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Glint
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/darshan-rambhia/glint" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    darshan-rambhia/glint
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Deployment
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Deployment
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#docker" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Docker
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Docker">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#docker-compose-recommended" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Docker Compose (Recommended)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#docker-compose-with-environment-variables" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Docker Compose with Environment Variables
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#docker-run-without-compose" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Docker Run (Without Compose)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#updating-docker" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Updating Docker
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#viewing-docker-logs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Viewing Docker Logs
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stopping-docker" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stopping Docker
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#podman" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Podman
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Podman">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#podman-run" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Podman Run
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#podman-compose" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Podman Compose
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#quadlet-podman-systemd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quadlet (Podman + systemd)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#homebrew" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Homebrew
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#go-install" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Go Install
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#binary-install-no-containers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Binary Install (No Containers)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Binary Install (No Containers)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-you-need" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What You Need
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-1-check-your-architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 1: Check Your Architecture
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-2-download-glint" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 2: Download Glint
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-3-create-a-system-user" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 3: Create a System User
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-4-create-directories" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 4: Create Directories
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-5-create-the-config-file" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 5: Create the Config File
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-6-test-the-config" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 6: Test the Config
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-7-create-the-systemd-service" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 7: Create the Systemd Service
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-8-start-the-service" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 8: Start the Service
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-9-verify-its-running" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 9: Verify It's Running
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#viewing-logs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Viewing Logs
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stopping-and-restarting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stopping and Restarting
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#updating-to-a-new-version" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Updating to a New Version
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#uninstalling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Uninstalling
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Troubleshooting
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Troubleshooting">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#common-issues" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Common Issues
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#testing-your-api-token" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Testing Your API Token
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#checking-if-glint-can-reach-proxmox" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Checking if Glint Can Reach Proxmox
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#resource-usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Resource Usage
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../logging/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Logging
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../testing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Testing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#docker" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Docker
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Docker">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#docker-compose-recommended" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Docker Compose (Recommended)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#docker-compose-with-environment-variables" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Docker Compose with Environment Variables
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#docker-run-without-compose" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Docker Run (Without Compose)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#updating-docker" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Updating Docker
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#viewing-docker-logs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Viewing Docker Logs
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stopping-docker" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stopping Docker
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#podman" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Podman
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Podman">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#podman-run" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Podman Run
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#podman-compose" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Podman Compose
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#quadlet-podman-systemd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quadlet (Podman + systemd)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#homebrew" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Homebrew
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#go-install" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Go Install
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#binary-install-no-containers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Binary Install (No Containers)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Binary Install (No Containers)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-you-need" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What You Need
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-1-check-your-architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 1: Check Your Architecture
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-2-download-glint" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 2: Download Glint
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-3-create-a-system-user" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 3: Create a System User
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-4-create-directories" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 4: Create Directories
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-5-create-the-config-file" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 5: Create the Config File
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-6-test-the-config" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 6: Test the Config
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-7-create-the-systemd-service" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 7: Create the Systemd Service
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-8-start-the-service" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 8: Start the Service
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-9-verify-its-running" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 9: Verify It's Running
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#viewing-logs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Viewing Logs
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stopping-and-restarting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stopping and Restarting
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#updating-to-a-new-version" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Updating to a New Version
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#uninstalling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Uninstalling
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Troubleshooting
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Troubleshooting">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#common-issues" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Common Issues
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#testing-your-api-token" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Testing Your API Token
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#checking-if-glint-can-reach-proxmox" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Checking if Glint Can Reach Proxmox
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#resource-usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Resource Usage
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="deployment">Deployment<a class="headerlink" href="#deployment" title="Permanent link">&para;</a></h1>
+<p>Glint can be deployed using Docker, Podman, or as a systemd service directly on a Linux machine (no containers).</p>
+<hr />
+<h2 id="docker">Docker<a class="headerlink" href="#docker" title="Permanent link">&para;</a></h2>
+<h3 id="docker-compose-recommended">Docker Compose (Recommended)<a class="headerlink" href="#docker-compose-recommended" title="Permanent link">&para;</a></h3>
+<p>This is the easiest way to run Glint. You need two files in the same folder:</p>
+<ol>
+<li>A <code>docker-compose.yml</code> file (tells Docker how to run Glint)</li>
+<li>A <code>glint.yml</code> file (tells Glint how to connect to your Proxmox server)</li>
+</ol>
+<p>If you haven't created <code>glint.yml</code> yet, see the <a href="../getting-started/">Getting Started</a> guide first.</p>
+<p>Create a file called <code>docker-compose.yml</code> with this content:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nt">services</span><span class="p">:</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="nt">glint</span><span class="p">:</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">    </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ghcr.io/darshan-rambhia/glint:latest</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">    </span><span class="nt">container_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">glint</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">    </span><span class="nt">restart</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">unless-stopped</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">    </span><span class="nt">ports</span><span class="p">:</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;3800:3800&quot;</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">    </span><span class="nt">volumes</span><span class="p">:</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">glint-data:/data</span>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">./glint.yml:/etc/glint/glint.yml:ro</span>
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="w">    </span><span class="nt">command</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;glint&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;--config&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;/etc/glint/glint.yml&quot;</span><span class="p p-Indicator">]</span>
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="w">    </span><span class="nt">deploy</span><span class="p">:</span>
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="w">      </span><span class="nt">resources</span><span class="p">:</span>
+<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="w">        </span><span class="nt">limits</span><span class="p">:</span>
+<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="w">          </span><span class="nt">memory</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">128M</span>
+<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="w">        </span><span class="nt">reservations</span><span class="p">:</span>
+<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a><span class="w">          </span><span class="nt">memory</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">32M</span>
+<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a><span class="w">    </span><span class="nt">logging</span><span class="p">:</span>
+<a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a><span class="w">      </span><span class="nt">driver</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">json-file</span>
+<a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a><span class="w">      </span><span class="nt">options</span><span class="p">:</span>
+<a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a><span class="w">        </span><span class="nt">max-size</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;10m&quot;</span>
+<a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a><span class="w">        </span><span class="nt">max-file</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;3&quot;</span>
+<a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a>
+<a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a><span class="nt">volumes</span><span class="p">:</span>
+<a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a><span class="w">  </span><span class="nt">glint-data</span><span class="p">:</span>
+</code></pre></div>
+<p>Then start Glint:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>docker<span class="w"> </span>compose<span class="w"> </span>up<span class="w"> </span>-d
+</code></pre></div>
+<div class="admonition note">
+<p class="admonition-title">Scratch base image</p>
+<p>The Glint image uses a <code>scratch</code> base (no shell, no utilities), so in-container <code>HEALTHCHECK</code> is not available. Use <code>curl http://localhost:3800/healthz</code> from the host or configure health checks in your reverse proxy.</p>
+</div>
+<h3 id="docker-compose-with-environment-variables">Docker Compose with Environment Variables<a class="headerlink" href="#docker-compose-with-environment-variables" title="Permanent link">&para;</a></h3>
+<p>If you only have one Proxmox server and one PBS server, you can skip the config file entirely and pass settings as environment variables instead:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nt">services</span><span class="p">:</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="nt">glint</span><span class="p">:</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">    </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ghcr.io/darshan-rambhia/glint:latest</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">    </span><span class="nt">container_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">glint</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">    </span><span class="nt">restart</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">unless-stopped</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">    </span><span class="nt">ports</span><span class="p">:</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;3800:3800&quot;</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">    </span><span class="nt">volumes</span><span class="p">:</span>
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">glint-data:/data</span>
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="w">    </span><span class="nt">environment</span><span class="p">:</span>
+<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="w">      </span><span class="nt">GLINT_PVE_URL</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://192.168.1.215:8006&quot;</span>
+<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="w">      </span><span class="nt">GLINT_PVE_TOKEN_ID</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;glint@pam!monitor&quot;</span>
+<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="w">      </span><span class="nt">GLINT_PVE_TOKEN_SECRET</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx&quot;</span>
+<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="w">      </span><span class="nt">GLINT_PBS_URL</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://10.100.1.102:8007&quot;</span>
+<a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a><span class="w">      </span><span class="nt">GLINT_PBS_TOKEN_ID</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;glint@pbs!monitor&quot;</span>
+<a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a><span class="w">      </span><span class="nt">GLINT_PBS_TOKEN_SECRET</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx&quot;</span>
+<a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a><span class="w">      </span><span class="nt">GLINT_PBS_DATASTORE</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;homelab&quot;</span>
+<a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a><span class="w">      </span><span class="nt">GLINT_NTFY_URL</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;http://10.100.1.104:8080&quot;</span>
+<a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a><span class="w">      </span><span class="nt">GLINT_NTFY_TOPIC</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;homelab-alerts&quot;</span>
+<a id="__codelineno-2-20" name="__codelineno-2-20" href="#__codelineno-2-20"></a><span class="w">      </span><span class="nt">GLINT_LOG_FORMAT</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;json&quot;</span>
+<a id="__codelineno-2-21" name="__codelineno-2-21" href="#__codelineno-2-21"></a><span class="w">    </span><span class="nt">deploy</span><span class="p">:</span>
+<a id="__codelineno-2-22" name="__codelineno-2-22" href="#__codelineno-2-22"></a><span class="w">      </span><span class="nt">resources</span><span class="p">:</span>
+<a id="__codelineno-2-23" name="__codelineno-2-23" href="#__codelineno-2-23"></a><span class="w">        </span><span class="nt">limits</span><span class="p">:</span>
+<a id="__codelineno-2-24" name="__codelineno-2-24" href="#__codelineno-2-24"></a><span class="w">          </span><span class="nt">memory</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">128M</span>
+<a id="__codelineno-2-25" name="__codelineno-2-25" href="#__codelineno-2-25"></a><span class="w">    </span><span class="nt">logging</span><span class="p">:</span>
+<a id="__codelineno-2-26" name="__codelineno-2-26" href="#__codelineno-2-26"></a><span class="w">      </span><span class="nt">driver</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">json-file</span>
+<a id="__codelineno-2-27" name="__codelineno-2-27" href="#__codelineno-2-27"></a><span class="w">      </span><span class="nt">options</span><span class="p">:</span>
+<a id="__codelineno-2-28" name="__codelineno-2-28" href="#__codelineno-2-28"></a><span class="w">        </span><span class="nt">max-size</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;10m&quot;</span>
+<a id="__codelineno-2-29" name="__codelineno-2-29" href="#__codelineno-2-29"></a><span class="w">        </span><span class="nt">max-file</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;3&quot;</span>
+<a id="__codelineno-2-30" name="__codelineno-2-30" href="#__codelineno-2-30"></a>
+<a id="__codelineno-2-31" name="__codelineno-2-31" href="#__codelineno-2-31"></a><span class="nt">volumes</span><span class="p">:</span>
+<a id="__codelineno-2-32" name="__codelineno-2-32" href="#__codelineno-2-32"></a><span class="w">  </span><span class="nt">glint-data</span><span class="p">:</span>
+</code></pre></div>
+<p>Replace the placeholder values with your actual Proxmox IP addresses and API tokens. See the <a href="../getting-started/">Getting Started</a> guide for how to create API tokens.</p>
+<h3 id="docker-run-without-compose">Docker Run (Without Compose)<a class="headerlink" href="#docker-run-without-compose" title="Permanent link">&para;</a></h3>
+<p>If you prefer a single command instead of a compose file:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>docker<span class="w"> </span>run<span class="w"> </span>-d<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span>--name<span class="w"> </span>glint<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span>--restart<span class="w"> </span>unless-stopped<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">  </span>-p<span class="w"> </span><span class="m">3800</span>:3800<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">  </span>-v<span class="w"> </span>glint-data:/data<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">  </span>-v<span class="w"> </span><span class="k">$(</span><span class="nb">pwd</span><span class="k">)</span>/glint.yml:/etc/glint/glint.yml:ro<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">  </span>ghcr.io/darshan-rambhia/glint:latest<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">  </span>glint<span class="w"> </span>--config<span class="w"> </span>/etc/glint/glint.yml
+</code></pre></div>
+<div class="admonition tip">
+<p class="admonition-title">What does each flag mean?</p>
+<ul>
+<li><code>-d</code> --- run in the background (detached)</li>
+<li><code>--name glint</code> --- give the container a name so you can refer to it later</li>
+<li><code>--restart unless-stopped</code> --- automatically restart if it crashes or the server reboots</li>
+<li><code>-p 3800:3800</code> --- make port 3800 accessible from your browser</li>
+<li><code>-v glint-data:/data</code> --- store Glint's database in a named volume (persists across restarts)</li>
+<li><code>-v $(pwd)/glint.yml:...</code> --- mount your config file into the container (read-only)</li>
+</ul>
+</div>
+<h3 id="updating-docker">Updating Docker<a class="headerlink" href="#updating-docker" title="Permanent link">&para;</a></h3>
+<p>To update Glint to the latest version:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># Pull the newest image</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>docker<span class="w"> </span>compose<span class="w"> </span>pull
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="c1"># Restart with the new image (your data is preserved)</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>docker<span class="w"> </span>compose<span class="w"> </span>up<span class="w"> </span>-d
+</code></pre></div>
+<h3 id="viewing-docker-logs">Viewing Docker Logs<a class="headerlink" href="#viewing-docker-logs" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1"># Follow logs in real-time (press Ctrl+C to stop)</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>docker<span class="w"> </span>compose<span class="w"> </span>logs<span class="w"> </span>-f<span class="w"> </span>glint
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="c1"># Show the last 50 lines</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>docker<span class="w"> </span>compose<span class="w"> </span>logs<span class="w"> </span>--tail<span class="o">=</span><span class="m">50</span><span class="w"> </span>glint
+</code></pre></div>
+<h3 id="stopping-docker">Stopping Docker<a class="headerlink" href="#stopping-docker" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># Stop Glint (keeps your data)</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>docker<span class="w"> </span>compose<span class="w"> </span>down
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="c1"># Stop and delete all data (start fresh)</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>docker<span class="w"> </span>compose<span class="w"> </span>down<span class="w"> </span>-v
+</code></pre></div>
+<hr />
+<h2 id="podman">Podman<a class="headerlink" href="#podman" title="Permanent link">&para;</a></h2>
+<p>Podman works almost identically to Docker. If you already have Podman installed, you can use the same compose files from the Docker section above.</p>
+<h3 id="podman-run">Podman Run<a class="headerlink" href="#podman-run" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1"># Create a volume for Glint&#39;s database</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>podman<span class="w"> </span>volume<span class="w"> </span>create<span class="w"> </span>glint-data
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="c1"># Start Glint</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>podman<span class="w"> </span>run<span class="w"> </span>-d<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">  </span>--name<span class="w"> </span>glint<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="w">  </span>--restart<span class="w"> </span>unless-stopped<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="w">  </span>-p<span class="w"> </span><span class="m">3800</span>:3800<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="w">  </span>-v<span class="w"> </span>glint-data:/data<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a><span class="w">  </span>-v<span class="w"> </span><span class="k">$(</span><span class="nb">pwd</span><span class="k">)</span>/glint.yml:/etc/glint/glint.yml:ro<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a><span class="w">  </span>ghcr.io/darshan-rambhia/glint:latest<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a><span class="w">  </span>glint<span class="w"> </span>--config<span class="w"> </span>/etc/glint/glint.yml
+</code></pre></div>
+<h3 id="podman-compose">Podman Compose<a class="headerlink" href="#podman-compose" title="Permanent link">&para;</a></h3>
+<p>Install <code>podman-compose</code> if you don't have it:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>pip<span class="w"> </span>install<span class="w"> </span>podman-compose
+</code></pre></div>
+<p>Then use the same <code>docker-compose.yml</code> from the Docker section:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>podman-compose<span class="w"> </span>up<span class="w"> </span>-d
+</code></pre></div>
+<h3 id="quadlet-podman-systemd">Quadlet (Podman + systemd)<a class="headerlink" href="#quadlet-podman-systemd" title="Permanent link">&para;</a></h3>
+<p>Quadlet lets Podman containers be managed by systemd, so they start automatically on boot and can be controlled with <code>systemctl</code> commands.</p>
+<p><strong>Step 1:</strong> Create the Quadlet file at <code>/etc/containers/systemd/glint.container</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="k">[Unit]</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="na">Description</span><span class="o">=</span><span class="s">Glint Proxmox Monitor</span>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="na">After</span><span class="o">=</span><span class="s">network-online.target</span>
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="na">Wants</span><span class="o">=</span><span class="s">network-online.target</span>
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="k">[Container]</span>
+<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="na">Image</span><span class="o">=</span><span class="s">ghcr.io/darshan-rambhia/glint:latest</span>
+<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a><span class="na">ContainerName</span><span class="o">=</span><span class="s">glint</span>
+<a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a><span class="na">PublishPort</span><span class="o">=</span><span class="s">3800:3800</span>
+<a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a><span class="na">Volume</span><span class="o">=</span><span class="s">glint-data:/data</span>
+<a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a><span class="na">Volume</span><span class="o">=</span><span class="s">/etc/glint/glint.yml:/etc/glint/glint.yml:ro</span>
+<a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a><span class="na">Exec</span><span class="o">=</span><span class="s">glint --config /etc/glint/glint.yml</span>
+<a id="__codelineno-10-13" name="__codelineno-10-13" href="#__codelineno-10-13"></a>
+<a id="__codelineno-10-14" name="__codelineno-10-14" href="#__codelineno-10-14"></a><span class="k">[Service]</span>
+<a id="__codelineno-10-15" name="__codelineno-10-15" href="#__codelineno-10-15"></a><span class="na">Restart</span><span class="o">=</span><span class="s">always</span>
+<a id="__codelineno-10-16" name="__codelineno-10-16" href="#__codelineno-10-16"></a><span class="na">TimeoutStartSec</span><span class="o">=</span><span class="s">120</span>
+<a id="__codelineno-10-17" name="__codelineno-10-17" href="#__codelineno-10-17"></a>
+<a id="__codelineno-10-18" name="__codelineno-10-18" href="#__codelineno-10-18"></a><span class="k">[Install]</span>
+<a id="__codelineno-10-19" name="__codelineno-10-19" href="#__codelineno-10-19"></a><span class="na">WantedBy</span><span class="o">=</span><span class="s">multi-user.target default.target</span>
+</code></pre></div>
+<p><strong>Step 2:</strong> Copy your config file into place:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>sudo<span class="w"> </span>mkdir<span class="w"> </span>-p<span class="w"> </span>/etc/glint
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>sudo<span class="w"> </span>cp<span class="w"> </span>glint.yml<span class="w"> </span>/etc/glint/glint.yml
+</code></pre></div>
+<p><strong>Step 3:</strong> Start the service:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>sudo<span class="w"> </span>systemctl<span class="w"> </span>daemon-reload
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>sudo<span class="w"> </span>systemctl<span class="w"> </span>start<span class="w"> </span>glint
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>sudo<span class="w"> </span>systemctl<span class="w"> </span><span class="nb">enable</span><span class="w"> </span>glint
+</code></pre></div>
+<p><strong>Step 4:</strong> Check that it's running:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>sudo<span class="w"> </span>systemctl<span class="w"> </span>status<span class="w"> </span>glint
+</code></pre></div>
+<p>To update: <code>podman pull ghcr.io/darshan-rambhia/glint:latest &amp;&amp; sudo systemctl restart glint</code></p>
+<hr />
+<h2 id="homebrew">Homebrew<a class="headerlink" href="#homebrew" title="Permanent link">&para;</a></h2>
+<p>Install Glint with <a href="https://brew.sh/">Homebrew</a> on macOS or Linux:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>brew<span class="w"> </span>install<span class="w"> </span>darshan-rambhia/tap/glint
+</code></pre></div>
+<p>This installs the <code>glint</code> binary and the SQLite dependency automatically.</p>
+<p><strong>Run Glint:</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>glint<span class="w"> </span>--config<span class="w"> </span>/path/to/glint.yml
+</code></pre></div>
+<p><strong>Update to the latest version:</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>brew<span class="w"> </span>upgrade<span class="w"> </span>glint
+</code></pre></div>
+<p><strong>Uninstall:</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>brew<span class="w"> </span>uninstall<span class="w"> </span>glint
+<a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>brew<span class="w"> </span>untap<span class="w"> </span>darshan-rambhia/tap
+</code></pre></div>
+<hr />
+<h2 id="go-install">Go Install<a class="headerlink" href="#go-install" title="Permanent link">&para;</a></h2>
+<p>If you have <a href="https://go.dev/dl/">Go 1.26+</a> installed, you can install Glint directly from source:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="nv">CGO_ENABLED</span><span class="o">=</span><span class="m">1</span><span class="w"> </span>go<span class="w"> </span>install<span class="w"> </span>github.com/darshan-rambhia/glint/cmd/glint@latest
+</code></pre></div>
+<div class="admonition note">
+<p class="admonition-title">CGO is required</p>
+<p>Glint uses SQLite, which requires a C compiler. <code>CGO_ENABLED=1</code> tells Go to use it. On most Linux systems, <code>gcc</code> is already installed. On Debian/Ubuntu, install it with <code>sudo apt install build-essential</code>. On macOS, install Xcode command line tools with <code>xcode-select --install</code>.</p>
+</div>
+<p>The binary is installed to <code>$GOPATH/bin</code> (usually <code>~/go/bin</code>). Make sure this is in your <code>PATH</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="c1"># Check if it&#39;s already in your PATH</span>
+<a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a>glint<span class="w"> </span>--version
+<a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a>
+<a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a><span class="c1"># If not found, add it (add this line to your ~/.bashrc or ~/.zshrc to make it permanent)</span>
+<a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a><span class="nb">export</span><span class="w"> </span><span class="nv">PATH</span><span class="o">=</span><span class="nv">$PATH</span>:<span class="k">$(</span>go<span class="w"> </span>env<span class="w"> </span>GOPATH<span class="k">)</span>/bin
+</code></pre></div>
+<p>To install a specific version:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="nv">CGO_ENABLED</span><span class="o">=</span><span class="m">1</span><span class="w"> </span>go<span class="w"> </span>install<span class="w"> </span>github.com/darshan-rambhia/glint/cmd/glint@v0.1.0
+</code></pre></div>
+<p>Once installed, create a config file and run it:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a>glint<span class="w"> </span>--config<span class="w"> </span>glint.yml
+</code></pre></div>
+<p>To run it as a system service, continue to <a href="#step-3-create-a-system-user">Step 3: Create a System User</a> below (skip the download step since you already have the binary --- just copy it to <code>/usr/local/bin</code>):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a>sudo<span class="w"> </span>cp<span class="w"> </span><span class="k">$(</span>go<span class="w"> </span>env<span class="w"> </span>GOPATH<span class="k">)</span>/bin/glint<span class="w"> </span>/usr/local/bin/glint
+</code></pre></div>
+<hr />
+<h2 id="binary-install-no-containers">Binary Install (No Containers)<a class="headerlink" href="#binary-install-no-containers" title="Permanent link">&para;</a></h2>
+<p>This section is for running Glint directly on a Linux machine without Docker or Podman. Glint is a single file --- you download it, create a config file, and run it.</p>
+<h3 id="what-you-need">What You Need<a class="headerlink" href="#what-you-need" title="Permanent link">&para;</a></h3>
+<ul>
+<li>A Linux machine (Debian, Ubuntu, Proxmox, etc.)</li>
+<li><code>curl</code> installed (usually pre-installed)</li>
+<li><code>sudo</code> access (administrator privileges)</li>
+<li>Your Proxmox API tokens (see <a href="../getting-started/">Getting Started</a>)</li>
+</ul>
+<h3 id="step-1-check-your-architecture">Step 1: Check Your Architecture<a class="headerlink" href="#step-1-check-your-architecture" title="Permanent link">&para;</a></h3>
+<p>Glint is available for two CPU types. Run this command to find out which one your machine uses:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a>uname<span class="w"> </span>-m
+</code></pre></div>
+<ul>
+<li>If it says <code>x86_64</code> --- you have a standard 64-bit Intel/AMD processor (most common)</li>
+<li>If it says <code>aarch64</code> --- you have an ARM processor (Raspberry Pi 4/5, Oracle Cloud free tier, etc.)</li>
+</ul>
+<h3 id="step-2-download-glint">Step 2: Download Glint<a class="headerlink" href="#step-2-download-glint" title="Permanent link">&para;</a></h3>
+<div class="tabbed-set tabbed-alternate" data-tabs="1:3"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><input id="__tabbed_1_3" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">x86_64 (Intel/AMD)</label><label for="__tabbed_1_2">aarch64 (ARM)</label><label for="__tabbed_1_3">Auto-detect</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a><span class="c1"># Download the latest release</span>
+<a id="__codelineno-24-2" name="__codelineno-24-2" href="#__codelineno-24-2"></a><span class="nv">VERSION</span><span class="o">=</span><span class="k">$(</span>curl<span class="w"> </span>-s<span class="w"> </span>https://api.github.com/repos/darshan-rambhia/glint/releases/latest<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>tag_name<span class="w"> </span><span class="p">|</span><span class="w"> </span>cut<span class="w"> </span>-d<span class="s1">&#39;&quot;&#39;</span><span class="w"> </span>-f4<span class="k">)</span>
+<a id="__codelineno-24-3" name="__codelineno-24-3" href="#__codelineno-24-3"></a>curl<span class="w"> </span>-sL<span class="w"> </span><span class="s2">&quot;https://github.com/darshan-rambhia/glint/releases/download/</span><span class="si">${</span><span class="nv">VERSION</span><span class="si">}</span><span class="s2">/glint_</span><span class="si">${</span><span class="nv">VERSION</span><span class="p">#v</span><span class="si">}</span><span class="s2">_linux_amd64.tar.gz&quot;</span><span class="w"> </span>-o<span class="w"> </span>/tmp/glint.tar.gz
+<a id="__codelineno-24-4" name="__codelineno-24-4" href="#__codelineno-24-4"></a>
+<a id="__codelineno-24-5" name="__codelineno-24-5" href="#__codelineno-24-5"></a><span class="c1"># Extract the binary to /usr/local/bin (where Linux looks for programs)</span>
+<a id="__codelineno-24-6" name="__codelineno-24-6" href="#__codelineno-24-6"></a>sudo<span class="w"> </span>tar<span class="w"> </span>-xzf<span class="w"> </span>/tmp/glint.tar.gz<span class="w"> </span>-C<span class="w"> </span>/usr/local/bin<span class="w"> </span>glint
+<a id="__codelineno-24-7" name="__codelineno-24-7" href="#__codelineno-24-7"></a>
+<a id="__codelineno-24-8" name="__codelineno-24-8" href="#__codelineno-24-8"></a><span class="c1"># Clean up the download</span>
+<a id="__codelineno-24-9" name="__codelineno-24-9" href="#__codelineno-24-9"></a>rm<span class="w"> </span>/tmp/glint.tar.gz
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a><span class="c1"># Download the latest release</span>
+<a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a><span class="nv">VERSION</span><span class="o">=</span><span class="k">$(</span>curl<span class="w"> </span>-s<span class="w"> </span>https://api.github.com/repos/darshan-rambhia/glint/releases/latest<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>tag_name<span class="w"> </span><span class="p">|</span><span class="w"> </span>cut<span class="w"> </span>-d<span class="s1">&#39;&quot;&#39;</span><span class="w"> </span>-f4<span class="k">)</span>
+<a id="__codelineno-25-3" name="__codelineno-25-3" href="#__codelineno-25-3"></a>curl<span class="w"> </span>-sL<span class="w"> </span><span class="s2">&quot;https://github.com/darshan-rambhia/glint/releases/download/</span><span class="si">${</span><span class="nv">VERSION</span><span class="si">}</span><span class="s2">/glint_</span><span class="si">${</span><span class="nv">VERSION</span><span class="p">#v</span><span class="si">}</span><span class="s2">_linux_arm64.tar.gz&quot;</span><span class="w"> </span>-o<span class="w"> </span>/tmp/glint.tar.gz
+<a id="__codelineno-25-4" name="__codelineno-25-4" href="#__codelineno-25-4"></a>
+<a id="__codelineno-25-5" name="__codelineno-25-5" href="#__codelineno-25-5"></a><span class="c1"># Extract the binary to /usr/local/bin (where Linux looks for programs)</span>
+<a id="__codelineno-25-6" name="__codelineno-25-6" href="#__codelineno-25-6"></a>sudo<span class="w"> </span>tar<span class="w"> </span>-xzf<span class="w"> </span>/tmp/glint.tar.gz<span class="w"> </span>-C<span class="w"> </span>/usr/local/bin<span class="w"> </span>glint
+<a id="__codelineno-25-7" name="__codelineno-25-7" href="#__codelineno-25-7"></a>
+<a id="__codelineno-25-8" name="__codelineno-25-8" href="#__codelineno-25-8"></a><span class="c1"># Clean up the download</span>
+<a id="__codelineno-25-9" name="__codelineno-25-9" href="#__codelineno-25-9"></a>rm<span class="w"> </span>/tmp/glint.tar.gz
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<p>This script detects your architecture automatically:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a><span class="nv">VERSION</span><span class="o">=</span><span class="k">$(</span>curl<span class="w"> </span>-s<span class="w"> </span>https://api.github.com/repos/darshan-rambhia/glint/releases/latest<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>tag_name<span class="w"> </span><span class="p">|</span><span class="w"> </span>cut<span class="w"> </span>-d<span class="s1">&#39;&quot;&#39;</span><span class="w"> </span>-f4<span class="k">)</span>
+<a id="__codelineno-26-2" name="__codelineno-26-2" href="#__codelineno-26-2"></a><span class="nv">ARCH</span><span class="o">=</span><span class="k">$(</span>uname<span class="w"> </span>-m<span class="k">)</span>
+<a id="__codelineno-26-3" name="__codelineno-26-3" href="#__codelineno-26-3"></a><span class="k">case</span><span class="w"> </span><span class="nv">$ARCH</span><span class="w"> </span><span class="k">in</span>
+<a id="__codelineno-26-4" name="__codelineno-26-4" href="#__codelineno-26-4"></a><span class="w">  </span>x86_64<span class="o">)</span><span class="w">  </span><span class="nv">ARCH</span><span class="o">=</span>amd64<span class="w"> </span><span class="p">;;</span>
+<a id="__codelineno-26-5" name="__codelineno-26-5" href="#__codelineno-26-5"></a><span class="w">  </span>aarch64<span class="o">)</span><span class="w"> </span><span class="nv">ARCH</span><span class="o">=</span>arm64<span class="w"> </span><span class="p">;;</span>
+<a id="__codelineno-26-6" name="__codelineno-26-6" href="#__codelineno-26-6"></a><span class="k">esac</span>
+<a id="__codelineno-26-7" name="__codelineno-26-7" href="#__codelineno-26-7"></a>
+<a id="__codelineno-26-8" name="__codelineno-26-8" href="#__codelineno-26-8"></a>curl<span class="w"> </span>-sL<span class="w"> </span><span class="s2">&quot;https://github.com/darshan-rambhia/glint/releases/download/</span><span class="si">${</span><span class="nv">VERSION</span><span class="si">}</span><span class="s2">/glint_</span><span class="si">${</span><span class="nv">VERSION</span><span class="p">#v</span><span class="si">}</span><span class="s2">_linux_</span><span class="si">${</span><span class="nv">ARCH</span><span class="si">}</span><span class="s2">.tar.gz&quot;</span><span class="w"> </span>-o<span class="w"> </span>/tmp/glint.tar.gz
+<a id="__codelineno-26-9" name="__codelineno-26-9" href="#__codelineno-26-9"></a>sudo<span class="w"> </span>tar<span class="w"> </span>-xzf<span class="w"> </span>/tmp/glint.tar.gz<span class="w"> </span>-C<span class="w"> </span>/usr/local/bin<span class="w"> </span>glint
+<a id="__codelineno-26-10" name="__codelineno-26-10" href="#__codelineno-26-10"></a>rm<span class="w"> </span>/tmp/glint.tar.gz
+</code></pre></div>
+</div>
+</div>
+</div>
+<p>Verify the download worked:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a>glint<span class="w"> </span>--version
+</code></pre></div>
+<p>You should see output like:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-28-1" name="__codelineno-28-1" href="#__codelineno-28-1"></a>glint v0.1.0
+<a id="__codelineno-28-2" name="__codelineno-28-2" href="#__codelineno-28-2"></a>  commit:    abc1234def5678 (clean)
+<a id="__codelineno-28-3" name="__codelineno-28-3" href="#__codelineno-28-3"></a>  built:     2026-02-16T12:00:00Z
+<a id="__codelineno-28-4" name="__codelineno-28-4" href="#__codelineno-28-4"></a>  go:        go1.26
+<a id="__codelineno-28-5" name="__codelineno-28-5" href="#__codelineno-28-5"></a>  platform:  linux/amd64
+</code></pre></div>
+<div class="admonition failure">
+<p class="admonition-title">Command not found?</p>
+<p>If you see <code>glint: command not found</code>, the binary might not be in your PATH. Try running it with the full path: <code>/usr/local/bin/glint --version</code>. If that works, add <code>/usr/local/bin</code> to your PATH.</p>
+</div>
+<h3 id="step-3-create-a-system-user">Step 3: Create a System User<a class="headerlink" href="#step-3-create-a-system-user" title="Permanent link">&para;</a></h3>
+<p>For security, Glint should run as its own user instead of as root. This limits what it can access on your system.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-29-1" name="__codelineno-29-1" href="#__codelineno-29-1"></a>sudo<span class="w"> </span>useradd<span class="w"> </span>-r<span class="w"> </span>-s<span class="w"> </span>/usr/sbin/nologin<span class="w"> </span>-d<span class="w"> </span>/var/lib/glint<span class="w"> </span>glint
+</code></pre></div>
+<div class="admonition info">
+<p class="admonition-title">What does this command do?</p>
+<ul>
+<li><code>-r</code> --- creates a "system" user (no home directory login, lower UID)</li>
+<li><code>-s /usr/sbin/nologin</code> --- prevents anyone from logging in as this user</li>
+<li><code>-d /var/lib/glint</code> --- sets the home directory (where Glint stores its database)</li>
+<li><code>glint</code> --- the username</li>
+</ul>
+</div>
+<h3 id="step-4-create-directories">Step 4: Create Directories<a class="headerlink" href="#step-4-create-directories" title="Permanent link">&para;</a></h3>
+<p>Glint needs two directories:</p>
+<ul>
+<li><code>/var/lib/glint</code> --- where the SQLite database lives (read/write)</li>
+<li><code>/etc/glint</code> --- where the config file lives (read-only)</li>
+</ul>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-30-1" name="__codelineno-30-1" href="#__codelineno-30-1"></a><span class="c1"># Create the data directory and give the glint user ownership</span>
+<a id="__codelineno-30-2" name="__codelineno-30-2" href="#__codelineno-30-2"></a>sudo<span class="w"> </span>mkdir<span class="w"> </span>-p<span class="w"> </span>/var/lib/glint
+<a id="__codelineno-30-3" name="__codelineno-30-3" href="#__codelineno-30-3"></a>sudo<span class="w"> </span>chown<span class="w"> </span>glint:glint<span class="w"> </span>/var/lib/glint
+<a id="__codelineno-30-4" name="__codelineno-30-4" href="#__codelineno-30-4"></a>
+<a id="__codelineno-30-5" name="__codelineno-30-5" href="#__codelineno-30-5"></a><span class="c1"># Create the config directory</span>
+<a id="__codelineno-30-6" name="__codelineno-30-6" href="#__codelineno-30-6"></a>sudo<span class="w"> </span>mkdir<span class="w"> </span>-p<span class="w"> </span>/etc/glint
+</code></pre></div>
+<h3 id="step-5-create-the-config-file">Step 5: Create the Config File<a class="headerlink" href="#step-5-create-the-config-file" title="Permanent link">&para;</a></h3>
+<p>Create the config file at <code>/etc/glint/glint.yml</code>. You can use <code>nano</code> (a simple text editor) or any editor you prefer:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-31-1" name="__codelineno-31-1" href="#__codelineno-31-1"></a>sudo<span class="w"> </span>nano<span class="w"> </span>/etc/glint/glint.yml
+</code></pre></div>
+<p>Paste the following content, replacing the placeholder values with your actual Proxmox details:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-32-1" name="__codelineno-32-1" href="#__codelineno-32-1"></a><span class="c1"># Where to store the database (must match the directory from Step 4)</span>
+<a id="__codelineno-32-2" name="__codelineno-32-2" href="#__codelineno-32-2"></a><span class="nt">db_path</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;/var/lib/glint/glint.db&quot;</span>
+<a id="__codelineno-32-3" name="__codelineno-32-3" href="#__codelineno-32-3"></a>
+<a id="__codelineno-32-4" name="__codelineno-32-4" href="#__codelineno-32-4"></a><span class="c1"># Web server settings</span>
+<a id="__codelineno-32-5" name="__codelineno-32-5" href="#__codelineno-32-5"></a><span class="nt">listen</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;:3800&quot;</span>
+<a id="__codelineno-32-6" name="__codelineno-32-6" href="#__codelineno-32-6"></a>
+<a id="__codelineno-32-7" name="__codelineno-32-7" href="#__codelineno-32-7"></a><span class="c1"># Logging (json is recommended for systemd, see the Logging page for details)</span>
+<a id="__codelineno-32-8" name="__codelineno-32-8" href="#__codelineno-32-8"></a><span class="nt">log_level</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;info&quot;</span>
+<a id="__codelineno-32-9" name="__codelineno-32-9" href="#__codelineno-32-9"></a><span class="nt">log_format</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;json&quot;</span>
+<a id="__codelineno-32-10" name="__codelineno-32-10" href="#__codelineno-32-10"></a>
+<a id="__codelineno-32-11" name="__codelineno-32-11" href="#__codelineno-32-11"></a><span class="c1"># Your Proxmox VE server</span>
+<a id="__codelineno-32-12" name="__codelineno-32-12" href="#__codelineno-32-12"></a><span class="nt">pve</span><span class="p">:</span>
+<a id="__codelineno-32-13" name="__codelineno-32-13" href="#__codelineno-32-13"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;main&quot;</span>
+<a id="__codelineno-32-14" name="__codelineno-32-14" href="#__codelineno-32-14"></a><span class="w">    </span><span class="nt">host</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://YOUR_PROXMOX_IP:8006&quot;</span><span class="w">       </span><span class="c1"># &lt;-- Replace with your Proxmox IP</span>
+<a id="__codelineno-32-15" name="__codelineno-32-15" href="#__codelineno-32-15"></a><span class="w">    </span><span class="nt">token_id</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;glint@pam!monitor&quot;</span><span class="w">               </span><span class="c1"># &lt;-- Replace with your token ID</span>
+<a id="__codelineno-32-16" name="__codelineno-32-16" href="#__codelineno-32-16"></a><span class="w">    </span><span class="nt">token_secret</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;YOUR_TOKEN_SECRET_HERE&quot;</span><span class="w">       </span><span class="c1"># &lt;-- Replace with your token secret</span>
+<a id="__codelineno-32-17" name="__codelineno-32-17" href="#__codelineno-32-17"></a><span class="w">    </span><span class="nt">insecure</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span><span class="w">                               </span><span class="c1"># Set to true if using self-signed certs</span>
+<a id="__codelineno-32-18" name="__codelineno-32-18" href="#__codelineno-32-18"></a>
+<a id="__codelineno-32-19" name="__codelineno-32-19" href="#__codelineno-32-19"></a><span class="c1"># Your Proxmox Backup Server (remove this section if you don&#39;t use PBS)</span>
+<a id="__codelineno-32-20" name="__codelineno-32-20" href="#__codelineno-32-20"></a><span class="nt">pbs</span><span class="p">:</span>
+<a id="__codelineno-32-21" name="__codelineno-32-21" href="#__codelineno-32-21"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;main-pbs&quot;</span>
+<a id="__codelineno-32-22" name="__codelineno-32-22" href="#__codelineno-32-22"></a><span class="w">    </span><span class="nt">host</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://YOUR_PBS_IP:8007&quot;</span><span class="w">            </span><span class="c1"># &lt;-- Replace with your PBS IP</span>
+<a id="__codelineno-32-23" name="__codelineno-32-23" href="#__codelineno-32-23"></a><span class="w">    </span><span class="nt">token_id</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;glint@pbs!monitor&quot;</span><span class="w">               </span><span class="c1"># &lt;-- Replace with your PBS token ID</span>
+<a id="__codelineno-32-24" name="__codelineno-32-24" href="#__codelineno-32-24"></a><span class="w">    </span><span class="nt">token_secret</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;YOUR_PBS_TOKEN_SECRET_HERE&quot;</span><span class="w">   </span><span class="c1"># &lt;-- Replace with your PBS token secret</span>
+<a id="__codelineno-32-25" name="__codelineno-32-25" href="#__codelineno-32-25"></a><span class="w">    </span><span class="nt">insecure</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<a id="__codelineno-32-26" name="__codelineno-32-26" href="#__codelineno-32-26"></a><span class="w">    </span><span class="nt">datastores</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;homelab&quot;</span><span class="p p-Indicator">]</span><span class="w">                      </span><span class="c1"># &lt;-- Replace with your datastore name(s)</span>
+</code></pre></div>
+<div class="admonition tip">
+<p class="admonition-title">Saving in nano</p>
+<p>Press <code>Ctrl+O</code> then <code>Enter</code> to save. Press <code>Ctrl+X</code> to exit.</p>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Don't have PBS?</p>
+<p>If you don't use Proxmox Backup Server, delete the entire <code>pbs:</code> section from the config file. Glint works fine with just PVE.</p>
+</div>
+<p>Set secure permissions on the config file (it contains API tokens):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-33-1" name="__codelineno-33-1" href="#__codelineno-33-1"></a>sudo<span class="w"> </span>chmod<span class="w"> </span><span class="m">640</span><span class="w"> </span>/etc/glint/glint.yml
+<a id="__codelineno-33-2" name="__codelineno-33-2" href="#__codelineno-33-2"></a>sudo<span class="w"> </span>chown<span class="w"> </span>root:glint<span class="w"> </span>/etc/glint/glint.yml
+</code></pre></div>
+<div class="admonition info">
+<p class="admonition-title">What do these permissions mean?</p>
+<ul>
+<li><code>640</code> means: the owner (root) can read and write, the group (glint) can read, and nobody else can access it</li>
+<li><code>root:glint</code> means: owned by root, but the glint group can read it --- so the Glint service can read the config but not modify it</li>
+</ul>
+</div>
+<h3 id="step-6-test-the-config">Step 6: Test the Config<a class="headerlink" href="#step-6-test-the-config" title="Permanent link">&para;</a></h3>
+<p>Before setting up the service, make sure Glint can start with your config:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-34-1" name="__codelineno-34-1" href="#__codelineno-34-1"></a><span class="c1"># Run Glint as the glint user to test (press Ctrl+C to stop)</span>
+<a id="__codelineno-34-2" name="__codelineno-34-2" href="#__codelineno-34-2"></a>sudo<span class="w"> </span>-u<span class="w"> </span>glint<span class="w"> </span>/usr/local/bin/glint<span class="w"> </span>--config<span class="w"> </span>/etc/glint/glint.yml
+</code></pre></div>
+<p>You should see log output like:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-35-1" name="__codelineno-35-1" href="#__codelineno-35-1"></a>{&quot;time&quot;:&quot;...&quot;,&quot;level&quot;:&quot;INFO&quot;,&quot;msg&quot;:&quot;starting glint&quot;,&quot;version&quot;:&quot;v0.1.0&quot;,&quot;listen&quot;:&quot;:3800&quot;}
+<a id="__codelineno-35-2" name="__codelineno-35-2" href="#__codelineno-35-2"></a>{&quot;time&quot;:&quot;...&quot;,&quot;level&quot;:&quot;INFO&quot;,&quot;msg&quot;:&quot;collector started&quot;,&quot;name&quot;:&quot;pve:main&quot;,&quot;interval&quot;:&quot;15s&quot;}
+</code></pre></div>
+<p>If you see errors like <code>401 Unauthorized</code> or <code>connection refused</code>, check the <a href="#troubleshooting">Troubleshooting</a> section below.</p>
+<p>Press <code>Ctrl+C</code> to stop the test.</p>
+<h3 id="step-7-create-the-systemd-service">Step 7: Create the Systemd Service<a class="headerlink" href="#step-7-create-the-systemd-service" title="Permanent link">&para;</a></h3>
+<p>Systemd is the program that manages services on Linux. Creating a "service file" tells systemd how to run Glint, when to start it, and what to do if it crashes.</p>
+<p>Create the service file at <code>/etc/systemd/system/glint.service</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-36-1" name="__codelineno-36-1" href="#__codelineno-36-1"></a>sudo<span class="w"> </span>nano<span class="w"> </span>/etc/systemd/system/glint.service
+</code></pre></div>
+<p>Paste this content:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-37-1" name="__codelineno-37-1" href="#__codelineno-37-1"></a><span class="k">[Unit]</span>
+<a id="__codelineno-37-2" name="__codelineno-37-2" href="#__codelineno-37-2"></a><span class="c1"># A human-readable description (shows up in &quot;systemctl status&quot;)</span>
+<a id="__codelineno-37-3" name="__codelineno-37-3" href="#__codelineno-37-3"></a><span class="na">Description</span><span class="o">=</span><span class="s">Glint Proxmox Monitor</span>
+<a id="__codelineno-37-4" name="__codelineno-37-4" href="#__codelineno-37-4"></a><span class="na">Documentation</span><span class="o">=</span><span class="s">https://github.com/darshan-rambhia/glint</span>
+<a id="__codelineno-37-5" name="__codelineno-37-5" href="#__codelineno-37-5"></a>
+<a id="__codelineno-37-6" name="__codelineno-37-6" href="#__codelineno-37-6"></a><span class="c1"># Wait for the network to be available before starting</span>
+<a id="__codelineno-37-7" name="__codelineno-37-7" href="#__codelineno-37-7"></a><span class="na">After</span><span class="o">=</span><span class="s">network-online.target</span>
+<a id="__codelineno-37-8" name="__codelineno-37-8" href="#__codelineno-37-8"></a><span class="na">Wants</span><span class="o">=</span><span class="s">network-online.target</span>
+<a id="__codelineno-37-9" name="__codelineno-37-9" href="#__codelineno-37-9"></a>
+<a id="__codelineno-37-10" name="__codelineno-37-10" href="#__codelineno-37-10"></a><span class="k">[Service]</span>
+<a id="__codelineno-37-11" name="__codelineno-37-11" href="#__codelineno-37-11"></a><span class="c1"># &quot;simple&quot; means the process itself is the service (no forking)</span>
+<a id="__codelineno-37-12" name="__codelineno-37-12" href="#__codelineno-37-12"></a><span class="na">Type</span><span class="o">=</span><span class="s">simple</span>
+<a id="__codelineno-37-13" name="__codelineno-37-13" href="#__codelineno-37-13"></a>
+<a id="__codelineno-37-14" name="__codelineno-37-14" href="#__codelineno-37-14"></a><span class="c1"># Run as the dedicated glint user (not root)</span>
+<a id="__codelineno-37-15" name="__codelineno-37-15" href="#__codelineno-37-15"></a><span class="na">User</span><span class="o">=</span><span class="s">glint</span>
+<a id="__codelineno-37-16" name="__codelineno-37-16" href="#__codelineno-37-16"></a><span class="na">Group</span><span class="o">=</span><span class="s">glint</span>
+<a id="__codelineno-37-17" name="__codelineno-37-17" href="#__codelineno-37-17"></a>
+<a id="__codelineno-37-18" name="__codelineno-37-18" href="#__codelineno-37-18"></a><span class="c1"># The command to start Glint</span>
+<a id="__codelineno-37-19" name="__codelineno-37-19" href="#__codelineno-37-19"></a><span class="na">ExecStart</span><span class="o">=</span><span class="s">/usr/local/bin/glint --config /etc/glint/glint.yml</span>
+<a id="__codelineno-37-20" name="__codelineno-37-20" href="#__codelineno-37-20"></a>
+<a id="__codelineno-37-21" name="__codelineno-37-21" href="#__codelineno-37-21"></a><span class="c1"># If Glint crashes, wait 5 seconds and restart it automatically</span>
+<a id="__codelineno-37-22" name="__codelineno-37-22" href="#__codelineno-37-22"></a><span class="na">Restart</span><span class="o">=</span><span class="s">on-failure</span>
+<a id="__codelineno-37-23" name="__codelineno-37-23" href="#__codelineno-37-23"></a><span class="na">RestartSec</span><span class="o">=</span><span class="s">5</span>
+<a id="__codelineno-37-24" name="__codelineno-37-24" href="#__codelineno-37-24"></a>
+<a id="__codelineno-37-25" name="__codelineno-37-25" href="#__codelineno-37-25"></a><span class="c1"># Allow up to 65536 open files (generous limit for SQLite + HTTP connections)</span>
+<a id="__codelineno-37-26" name="__codelineno-37-26" href="#__codelineno-37-26"></a><span class="na">LimitNOFILE</span><span class="o">=</span><span class="s">65536</span>
+<a id="__codelineno-37-27" name="__codelineno-37-27" href="#__codelineno-37-27"></a>
+<a id="__codelineno-37-28" name="__codelineno-37-28" href="#__codelineno-37-28"></a><span class="c1"># --- Security hardening ---</span>
+<a id="__codelineno-37-29" name="__codelineno-37-29" href="#__codelineno-37-29"></a><span class="c1"># These settings restrict what the Glint process can do, reducing the impact</span>
+<a id="__codelineno-37-30" name="__codelineno-37-30" href="#__codelineno-37-30"></a><span class="c1"># if the process is ever compromised.</span>
+<a id="__codelineno-37-31" name="__codelineno-37-31" href="#__codelineno-37-31"></a>
+<a id="__codelineno-37-32" name="__codelineno-37-32" href="#__codelineno-37-32"></a><span class="c1"># Prevent the process from gaining new privileges</span>
+<a id="__codelineno-37-33" name="__codelineno-37-33" href="#__codelineno-37-33"></a><span class="na">NoNewPrivileges</span><span class="o">=</span><span class="s">yes</span>
+<a id="__codelineno-37-34" name="__codelineno-37-34" href="#__codelineno-37-34"></a>
+<a id="__codelineno-37-35" name="__codelineno-37-35" href="#__codelineno-37-35"></a><span class="c1"># Make the entire filesystem read-only, except for specific paths below</span>
+<a id="__codelineno-37-36" name="__codelineno-37-36" href="#__codelineno-37-36"></a><span class="na">ProtectSystem</span><span class="o">=</span><span class="s">strict</span>
+<a id="__codelineno-37-37" name="__codelineno-37-37" href="#__codelineno-37-37"></a>
+<a id="__codelineno-37-38" name="__codelineno-37-38" href="#__codelineno-37-38"></a><span class="c1"># Hide /home, /root, and /run/user from the process</span>
+<a id="__codelineno-37-39" name="__codelineno-37-39" href="#__codelineno-37-39"></a><span class="na">ProtectHome</span><span class="o">=</span><span class="s">yes</span>
+<a id="__codelineno-37-40" name="__codelineno-37-40" href="#__codelineno-37-40"></a>
+<a id="__codelineno-37-41" name="__codelineno-37-41" href="#__codelineno-37-41"></a><span class="c1"># Allow writing ONLY to the data directory (for the SQLite database)</span>
+<a id="__codelineno-37-42" name="__codelineno-37-42" href="#__codelineno-37-42"></a><span class="na">ReadWritePaths</span><span class="o">=</span><span class="s">/var/lib/glint</span>
+<a id="__codelineno-37-43" name="__codelineno-37-43" href="#__codelineno-37-43"></a>
+<a id="__codelineno-37-44" name="__codelineno-37-44" href="#__codelineno-37-44"></a><span class="c1"># Allow reading the config file</span>
+<a id="__codelineno-37-45" name="__codelineno-37-45" href="#__codelineno-37-45"></a><span class="na">ReadOnlyPaths</span><span class="o">=</span><span class="s">/etc/glint</span>
+<a id="__codelineno-37-46" name="__codelineno-37-46" href="#__codelineno-37-46"></a>
+<a id="__codelineno-37-47" name="__codelineno-37-47" href="#__codelineno-37-47"></a><span class="c1"># Give the process its own /tmp (can&#39;t see other processes&#39; temp files)</span>
+<a id="__codelineno-37-48" name="__codelineno-37-48" href="#__codelineno-37-48"></a><span class="na">PrivateTmp</span><span class="o">=</span><span class="s">yes</span>
+<a id="__codelineno-37-49" name="__codelineno-37-49" href="#__codelineno-37-49"></a>
+<a id="__codelineno-37-50" name="__codelineno-37-50" href="#__codelineno-37-50"></a><span class="c1"># Hide physical devices (/dev) from the process</span>
+<a id="__codelineno-37-51" name="__codelineno-37-51" href="#__codelineno-37-51"></a><span class="na">PrivateDevices</span><span class="o">=</span><span class="s">yes</span>
+<a id="__codelineno-37-52" name="__codelineno-37-52" href="#__codelineno-37-52"></a>
+<a id="__codelineno-37-53" name="__codelineno-37-53" href="#__codelineno-37-53"></a><span class="c1"># Prevent modifying kernel settings</span>
+<a id="__codelineno-37-54" name="__codelineno-37-54" href="#__codelineno-37-54"></a><span class="na">ProtectKernelTunables</span><span class="o">=</span><span class="s">yes</span>
+<a id="__codelineno-37-55" name="__codelineno-37-55" href="#__codelineno-37-55"></a><span class="na">ProtectKernelModules</span><span class="o">=</span><span class="s">yes</span>
+<a id="__codelineno-37-56" name="__codelineno-37-56" href="#__codelineno-37-56"></a><span class="na">ProtectControlGroups</span><span class="o">=</span><span class="s">yes</span>
+<a id="__codelineno-37-57" name="__codelineno-37-57" href="#__codelineno-37-57"></a>
+<a id="__codelineno-37-58" name="__codelineno-37-58" href="#__codelineno-37-58"></a><span class="k">[Install]</span>
+<a id="__codelineno-37-59" name="__codelineno-37-59" href="#__codelineno-37-59"></a><span class="c1"># Start this service when the system reaches &quot;multi-user&quot; mode (normal boot)</span>
+<a id="__codelineno-37-60" name="__codelineno-37-60" href="#__codelineno-37-60"></a><span class="na">WantedBy</span><span class="o">=</span><span class="s">multi-user.target</span>
+</code></pre></div>
+<p>Save and exit (<code>Ctrl+O</code>, <code>Enter</code>, <code>Ctrl+X</code> in nano).</p>
+<h3 id="step-8-start-the-service">Step 8: Start the Service<a class="headerlink" href="#step-8-start-the-service" title="Permanent link">&para;</a></h3>
+<p>Tell systemd to load the new service file, enable it to start on boot, and start it now:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-38-1" name="__codelineno-38-1" href="#__codelineno-38-1"></a><span class="c1"># Reload systemd so it sees the new file</span>
+<a id="__codelineno-38-2" name="__codelineno-38-2" href="#__codelineno-38-2"></a>sudo<span class="w"> </span>systemctl<span class="w"> </span>daemon-reload
+<a id="__codelineno-38-3" name="__codelineno-38-3" href="#__codelineno-38-3"></a>
+<a id="__codelineno-38-4" name="__codelineno-38-4" href="#__codelineno-38-4"></a><span class="c1"># Enable = start automatically on every boot</span>
+<a id="__codelineno-38-5" name="__codelineno-38-5" href="#__codelineno-38-5"></a>sudo<span class="w"> </span>systemctl<span class="w"> </span><span class="nb">enable</span><span class="w"> </span>glint
+<a id="__codelineno-38-6" name="__codelineno-38-6" href="#__codelineno-38-6"></a>
+<a id="__codelineno-38-7" name="__codelineno-38-7" href="#__codelineno-38-7"></a><span class="c1"># Start it right now</span>
+<a id="__codelineno-38-8" name="__codelineno-38-8" href="#__codelineno-38-8"></a>sudo<span class="w"> </span>systemctl<span class="w"> </span>start<span class="w"> </span>glint
+</code></pre></div>
+<h3 id="step-9-verify-its-running">Step 9: Verify It's Running<a class="headerlink" href="#step-9-verify-its-running" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-39-1" name="__codelineno-39-1" href="#__codelineno-39-1"></a>sudo<span class="w"> </span>systemctl<span class="w"> </span>status<span class="w"> </span>glint
+</code></pre></div>
+<p>You should see output like:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-40-1" name="__codelineno-40-1" href="#__codelineno-40-1"></a>● glint.service - Glint Proxmox Monitor
+<a id="__codelineno-40-2" name="__codelineno-40-2" href="#__codelineno-40-2"></a>     Loaded: loaded (/etc/systemd/system/glint.service; enabled; preset: enabled)
+<a id="__codelineno-40-3" name="__codelineno-40-3" href="#__codelineno-40-3"></a>     Active: active (running) since Sun 2026-02-16 12:00:00 UTC; 5s ago
+<a id="__codelineno-40-4" name="__codelineno-40-4" href="#__codelineno-40-4"></a>       Docs: https://github.com/darshan-rambhia/glint
+<a id="__codelineno-40-5" name="__codelineno-40-5" href="#__codelineno-40-5"></a>   Main PID: 12345 (glint)
+<a id="__codelineno-40-6" name="__codelineno-40-6" href="#__codelineno-40-6"></a>      Tasks: 8 (limit: 4915)
+<a id="__codelineno-40-7" name="__codelineno-40-7" href="#__codelineno-40-7"></a>     Memory: 34.2M
+<a id="__codelineno-40-8" name="__codelineno-40-8" href="#__codelineno-40-8"></a>        CPU: 120ms
+<a id="__codelineno-40-9" name="__codelineno-40-9" href="#__codelineno-40-9"></a>     CGroup: /system.slice/glint.service
+<a id="__codelineno-40-10" name="__codelineno-40-10" href="#__codelineno-40-10"></a>             └─12345 /usr/local/bin/glint --config /etc/glint/glint.yml
+</code></pre></div>
+<div class="admonition success">
+<p class="admonition-title">What to look for</p>
+<ul>
+<li><code>Active: active (running)</code> --- Glint is running</li>
+<li><code>enabled</code> --- will start automatically on boot</li>
+</ul>
+</div>
+<p>Check the health endpoint:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-41-1" name="__codelineno-41-1" href="#__codelineno-41-1"></a>curl<span class="w"> </span>http://localhost:3800/healthz
+</code></pre></div>
+<p>Open your browser and go to <code>http://YOUR_SERVER_IP:3800</code> to see the dashboard.</p>
+<h3 id="viewing-logs">Viewing Logs<a class="headerlink" href="#viewing-logs" title="Permanent link">&para;</a></h3>
+<p>Logs are stored in the systemd journal. Here are the most useful commands:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-42-1" name="__codelineno-42-1" href="#__codelineno-42-1"></a><span class="c1"># Follow logs in real-time (press Ctrl+C to stop)</span>
+<a id="__codelineno-42-2" name="__codelineno-42-2" href="#__codelineno-42-2"></a>sudo<span class="w"> </span>journalctl<span class="w"> </span>-u<span class="w"> </span>glint<span class="w"> </span>-f
+<a id="__codelineno-42-3" name="__codelineno-42-3" href="#__codelineno-42-3"></a>
+<a id="__codelineno-42-4" name="__codelineno-42-4" href="#__codelineno-42-4"></a><span class="c1"># Show the last 50 log lines</span>
+<a id="__codelineno-42-5" name="__codelineno-42-5" href="#__codelineno-42-5"></a>sudo<span class="w"> </span>journalctl<span class="w"> </span>-u<span class="w"> </span>glint<span class="w"> </span>-n<span class="w"> </span><span class="m">50</span>
+<a id="__codelineno-42-6" name="__codelineno-42-6" href="#__codelineno-42-6"></a>
+<a id="__codelineno-42-7" name="__codelineno-42-7" href="#__codelineno-42-7"></a><span class="c1"># Show logs from the last hour</span>
+<a id="__codelineno-42-8" name="__codelineno-42-8" href="#__codelineno-42-8"></a>sudo<span class="w"> </span>journalctl<span class="w"> </span>-u<span class="w"> </span>glint<span class="w"> </span>--since<span class="w"> </span><span class="s2">&quot;1 hour ago&quot;</span>
+<a id="__codelineno-42-9" name="__codelineno-42-9" href="#__codelineno-42-9"></a>
+<a id="__codelineno-42-10" name="__codelineno-42-10" href="#__codelineno-42-10"></a><span class="c1"># Show logs since the last system boot</span>
+<a id="__codelineno-42-11" name="__codelineno-42-11" href="#__codelineno-42-11"></a>sudo<span class="w"> </span>journalctl<span class="w"> </span>-u<span class="w"> </span>glint<span class="w"> </span>-b
+<a id="__codelineno-42-12" name="__codelineno-42-12" href="#__codelineno-42-12"></a>
+<a id="__codelineno-42-13" name="__codelineno-42-13" href="#__codelineno-42-13"></a><span class="c1"># Show only errors</span>
+<a id="__codelineno-42-14" name="__codelineno-42-14" href="#__codelineno-42-14"></a>sudo<span class="w"> </span>journalctl<span class="w"> </span>-u<span class="w"> </span>glint<span class="w"> </span>--priority<span class="o">=</span>err
+</code></pre></div>
+<h3 id="stopping-and-restarting">Stopping and Restarting<a class="headerlink" href="#stopping-and-restarting" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-43-1" name="__codelineno-43-1" href="#__codelineno-43-1"></a><span class="c1"># Stop Glint</span>
+<a id="__codelineno-43-2" name="__codelineno-43-2" href="#__codelineno-43-2"></a>sudo<span class="w"> </span>systemctl<span class="w"> </span>stop<span class="w"> </span>glint
+<a id="__codelineno-43-3" name="__codelineno-43-3" href="#__codelineno-43-3"></a>
+<a id="__codelineno-43-4" name="__codelineno-43-4" href="#__codelineno-43-4"></a><span class="c1"># Start Glint</span>
+<a id="__codelineno-43-5" name="__codelineno-43-5" href="#__codelineno-43-5"></a>sudo<span class="w"> </span>systemctl<span class="w"> </span>start<span class="w"> </span>glint
+<a id="__codelineno-43-6" name="__codelineno-43-6" href="#__codelineno-43-6"></a>
+<a id="__codelineno-43-7" name="__codelineno-43-7" href="#__codelineno-43-7"></a><span class="c1"># Restart Glint (stop + start)</span>
+<a id="__codelineno-43-8" name="__codelineno-43-8" href="#__codelineno-43-8"></a>sudo<span class="w"> </span>systemctl<span class="w"> </span>restart<span class="w"> </span>glint
+<a id="__codelineno-43-9" name="__codelineno-43-9" href="#__codelineno-43-9"></a>
+<a id="__codelineno-43-10" name="__codelineno-43-10" href="#__codelineno-43-10"></a><span class="c1"># Disable auto-start on boot</span>
+<a id="__codelineno-43-11" name="__codelineno-43-11" href="#__codelineno-43-11"></a>sudo<span class="w"> </span>systemctl<span class="w"> </span>disable<span class="w"> </span>glint
+</code></pre></div>
+<h3 id="updating-to-a-new-version">Updating to a New Version<a class="headerlink" href="#updating-to-a-new-version" title="Permanent link">&para;</a></h3>
+<p>When a new version of Glint is released:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-44-1" name="__codelineno-44-1" href="#__codelineno-44-1"></a><span class="c1"># 1. Download the new version (replace with actual version number)</span>
+<a id="__codelineno-44-2" name="__codelineno-44-2" href="#__codelineno-44-2"></a><span class="nv">VERSION</span><span class="o">=</span>v0.2.0
+<a id="__codelineno-44-3" name="__codelineno-44-3" href="#__codelineno-44-3"></a><span class="nv">ARCH</span><span class="o">=</span>amd64<span class="w">  </span><span class="c1"># or arm64 for ARM</span>
+<a id="__codelineno-44-4" name="__codelineno-44-4" href="#__codelineno-44-4"></a>
+<a id="__codelineno-44-5" name="__codelineno-44-5" href="#__codelineno-44-5"></a>curl<span class="w"> </span>-sL<span class="w"> </span><span class="s2">&quot;https://github.com/darshan-rambhia/glint/releases/download/</span><span class="si">${</span><span class="nv">VERSION</span><span class="si">}</span><span class="s2">/glint_</span><span class="si">${</span><span class="nv">VERSION</span><span class="p">#v</span><span class="si">}</span><span class="s2">_linux_</span><span class="si">${</span><span class="nv">ARCH</span><span class="si">}</span><span class="s2">.tar.gz&quot;</span><span class="w"> </span>-o<span class="w"> </span>/tmp/glint.tar.gz
+<a id="__codelineno-44-6" name="__codelineno-44-6" href="#__codelineno-44-6"></a>sudo<span class="w"> </span>tar<span class="w"> </span>-xzf<span class="w"> </span>/tmp/glint.tar.gz<span class="w"> </span>-C<span class="w"> </span>/usr/local/bin<span class="w"> </span>glint
+<a id="__codelineno-44-7" name="__codelineno-44-7" href="#__codelineno-44-7"></a>rm<span class="w"> </span>/tmp/glint.tar.gz
+<a id="__codelineno-44-8" name="__codelineno-44-8" href="#__codelineno-44-8"></a>
+<a id="__codelineno-44-9" name="__codelineno-44-9" href="#__codelineno-44-9"></a><span class="c1"># 2. Restart the service to use the new version</span>
+<a id="__codelineno-44-10" name="__codelineno-44-10" href="#__codelineno-44-10"></a>sudo<span class="w"> </span>systemctl<span class="w"> </span>restart<span class="w"> </span>glint
+<a id="__codelineno-44-11" name="__codelineno-44-11" href="#__codelineno-44-11"></a>
+<a id="__codelineno-44-12" name="__codelineno-44-12" href="#__codelineno-44-12"></a><span class="c1"># 3. Verify the new version is running</span>
+<a id="__codelineno-44-13" name="__codelineno-44-13" href="#__codelineno-44-13"></a>glint<span class="w"> </span>--version
+<a id="__codelineno-44-14" name="__codelineno-44-14" href="#__codelineno-44-14"></a>sudo<span class="w"> </span>systemctl<span class="w"> </span>status<span class="w"> </span>glint
+</code></pre></div>
+<div class="admonition tip">
+<p class="admonition-title">Auto-detect version script</p>
+<p>To always download the latest version automatically:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-45-1" name="__codelineno-45-1" href="#__codelineno-45-1"></a><span class="nv">VERSION</span><span class="o">=</span><span class="k">$(</span>curl<span class="w"> </span>-s<span class="w"> </span>https://api.github.com/repos/darshan-rambhia/glint/releases/latest<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>tag_name<span class="w"> </span><span class="p">|</span><span class="w"> </span>cut<span class="w"> </span>-d<span class="s1">&#39;&quot;&#39;</span><span class="w"> </span>-f4<span class="k">)</span>
+<a id="__codelineno-45-2" name="__codelineno-45-2" href="#__codelineno-45-2"></a><span class="nv">ARCH</span><span class="o">=</span><span class="k">$(</span>uname<span class="w"> </span>-m<span class="k">)</span>
+<a id="__codelineno-45-3" name="__codelineno-45-3" href="#__codelineno-45-3"></a><span class="k">case</span><span class="w"> </span><span class="nv">$ARCH</span><span class="w"> </span><span class="k">in</span>
+<a id="__codelineno-45-4" name="__codelineno-45-4" href="#__codelineno-45-4"></a><span class="w">  </span>x86_64<span class="o">)</span><span class="w">  </span><span class="nv">ARCH</span><span class="o">=</span>amd64<span class="w"> </span><span class="p">;;</span>
+<a id="__codelineno-45-5" name="__codelineno-45-5" href="#__codelineno-45-5"></a><span class="w">  </span>aarch64<span class="o">)</span><span class="w"> </span><span class="nv">ARCH</span><span class="o">=</span>arm64<span class="w"> </span><span class="p">;;</span>
+<a id="__codelineno-45-6" name="__codelineno-45-6" href="#__codelineno-45-6"></a><span class="k">esac</span>
+<a id="__codelineno-45-7" name="__codelineno-45-7" href="#__codelineno-45-7"></a>
+<a id="__codelineno-45-8" name="__codelineno-45-8" href="#__codelineno-45-8"></a>curl<span class="w"> </span>-sL<span class="w"> </span><span class="s2">&quot;https://github.com/darshan-rambhia/glint/releases/download/</span><span class="si">${</span><span class="nv">VERSION</span><span class="si">}</span><span class="s2">/glint_</span><span class="si">${</span><span class="nv">VERSION</span><span class="p">#v</span><span class="si">}</span><span class="s2">_linux_</span><span class="si">${</span><span class="nv">ARCH</span><span class="si">}</span><span class="s2">.tar.gz&quot;</span><span class="w"> </span>-o<span class="w"> </span>/tmp/glint.tar.gz
+<a id="__codelineno-45-9" name="__codelineno-45-9" href="#__codelineno-45-9"></a>sudo<span class="w"> </span>tar<span class="w"> </span>-xzf<span class="w"> </span>/tmp/glint.tar.gz<span class="w"> </span>-C<span class="w"> </span>/usr/local/bin<span class="w"> </span>glint
+<a id="__codelineno-45-10" name="__codelineno-45-10" href="#__codelineno-45-10"></a>rm<span class="w"> </span>/tmp/glint.tar.gz
+<a id="__codelineno-45-11" name="__codelineno-45-11" href="#__codelineno-45-11"></a>sudo<span class="w"> </span>systemctl<span class="w"> </span>restart<span class="w"> </span>glint
+<a id="__codelineno-45-12" name="__codelineno-45-12" href="#__codelineno-45-12"></a><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Updated to </span><span class="k">$(</span>glint<span class="w"> </span>--version<span class="w"> </span><span class="p">|</span><span class="w"> </span>head<span class="w"> </span>-1<span class="k">)</span><span class="s2">&quot;</span>
+</code></pre></div>
+</div>
+<h3 id="uninstalling">Uninstalling<a class="headerlink" href="#uninstalling" title="Permanent link">&para;</a></h3>
+<p>To completely remove Glint from your system:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-46-1" name="__codelineno-46-1" href="#__codelineno-46-1"></a><span class="c1"># 1. Stop and disable the service</span>
+<a id="__codelineno-46-2" name="__codelineno-46-2" href="#__codelineno-46-2"></a>sudo<span class="w"> </span>systemctl<span class="w"> </span>stop<span class="w"> </span>glint
+<a id="__codelineno-46-3" name="__codelineno-46-3" href="#__codelineno-46-3"></a>sudo<span class="w"> </span>systemctl<span class="w"> </span>disable<span class="w"> </span>glint
+<a id="__codelineno-46-4" name="__codelineno-46-4" href="#__codelineno-46-4"></a>
+<a id="__codelineno-46-5" name="__codelineno-46-5" href="#__codelineno-46-5"></a><span class="c1"># 2. Remove the service file</span>
+<a id="__codelineno-46-6" name="__codelineno-46-6" href="#__codelineno-46-6"></a>sudo<span class="w"> </span>rm<span class="w"> </span>/etc/systemd/system/glint.service
+<a id="__codelineno-46-7" name="__codelineno-46-7" href="#__codelineno-46-7"></a>sudo<span class="w"> </span>systemctl<span class="w"> </span>daemon-reload
+<a id="__codelineno-46-8" name="__codelineno-46-8" href="#__codelineno-46-8"></a>
+<a id="__codelineno-46-9" name="__codelineno-46-9" href="#__codelineno-46-9"></a><span class="c1"># 3. Remove the binary</span>
+<a id="__codelineno-46-10" name="__codelineno-46-10" href="#__codelineno-46-10"></a>sudo<span class="w"> </span>rm<span class="w"> </span>/usr/local/bin/glint
+<a id="__codelineno-46-11" name="__codelineno-46-11" href="#__codelineno-46-11"></a>
+<a id="__codelineno-46-12" name="__codelineno-46-12" href="#__codelineno-46-12"></a><span class="c1"># 4. Remove config and data (WARNING: deletes your database and history)</span>
+<a id="__codelineno-46-13" name="__codelineno-46-13" href="#__codelineno-46-13"></a>sudo<span class="w"> </span>rm<span class="w"> </span>-rf<span class="w"> </span>/etc/glint
+<a id="__codelineno-46-14" name="__codelineno-46-14" href="#__codelineno-46-14"></a>sudo<span class="w"> </span>rm<span class="w"> </span>-rf<span class="w"> </span>/var/lib/glint
+<a id="__codelineno-46-15" name="__codelineno-46-15" href="#__codelineno-46-15"></a>
+<a id="__codelineno-46-16" name="__codelineno-46-16" href="#__codelineno-46-16"></a><span class="c1"># 5. Remove the system user</span>
+<a id="__codelineno-46-17" name="__codelineno-46-17" href="#__codelineno-46-17"></a>sudo<span class="w"> </span>userdel<span class="w"> </span>glint
+</code></pre></div>
+<hr />
+<h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
+<h3 id="common-issues">Common Issues<a class="headerlink" href="#common-issues" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Problem</th>
+<th>What it looks like</th>
+<th>Solution</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Wrong API token</strong></td>
+<td><code>401 Unauthorized</code> in logs</td>
+<td>Double-check <code>token_id</code> and <code>token_secret</code> in your config. Format is <code>user@realm!tokenname</code>.</td>
+</tr>
+<tr>
+<td><strong>Token lacks permissions</strong></td>
+<td><code>403 Forbidden</code> in logs</td>
+<td>Re-run: <code>pveum aclmod / -user glint@pam -role PVEAuditor</code></td>
+</tr>
+<tr>
+<td><strong>Can't reach Proxmox</strong></td>
+<td><code>connection refused</code> in logs</td>
+<td>Check that the IP and port are correct, and that Glint's machine can reach the Proxmox server. Try: <code>curl -k https://YOUR_PVE_IP:8006/api2/json/version</code></td>
+</tr>
+<tr>
+<td><strong>TLS/SSL error</strong></td>
+<td><code>TLS handshake error</code> in logs</td>
+<td>Set <code>insecure: true</code> in your config if using self-signed certificates.</td>
+</tr>
+<tr>
+<td><strong>Service won't start</strong></td>
+<td><code>Active: failed</code> in <code>systemctl status</code></td>
+<td>Check logs: <code>sudo journalctl -u glint -n 50</code>. Common causes: invalid YAML syntax, wrong file permissions, missing config file.</td>
+</tr>
+<tr>
+<td><strong>Permission denied</strong></td>
+<td><code>permission denied</code> for database file</td>
+<td>Make sure <code>/var/lib/glint</code> is owned by the glint user: <code>sudo chown glint:glint /var/lib/glint</code></td>
+</tr>
+<tr>
+<td><strong>Port already in use</strong></td>
+<td><code>bind: address already in use</code></td>
+<td>Something else is using port 3800. Either stop that service or change <code>listen</code> in your config to a different port, e.g., <code>listen: ":3801"</code>.</td>
+</tr>
+<tr>
+<td><strong>No data on dashboard</strong></td>
+<td>Dashboard loads but shows no metrics</td>
+<td>Wait 15 seconds for the first poll. If still empty, check logs for collector errors.</td>
+</tr>
+<tr>
+<td><strong>No disk data</strong></td>
+<td>Dashboard shows nodes and guests but no disks</td>
+<td>S.M.A.R.T. data is polled once per hour. Wait up to 1 hour after first start, or set <code>disk_poll_interval: "1m"</code> temporarily for testing.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="testing-your-api-token">Testing Your API Token<a class="headerlink" href="#testing-your-api-token" title="Permanent link">&para;</a></h3>
+<p>You can test your API token directly from the command line to verify it works:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-47-1" name="__codelineno-47-1" href="#__codelineno-47-1"></a><span class="c1"># Test PVE token (replace with your values)</span>
+<a id="__codelineno-47-2" name="__codelineno-47-2" href="#__codelineno-47-2"></a>curl<span class="w"> </span>-k<span class="w"> </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: PVEAPIToken=glint@pam!monitor=YOUR_SECRET&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-47-3" name="__codelineno-47-3" href="#__codelineno-47-3"></a><span class="w">  </span>https://YOUR_PVE_IP:8006/api2/json/version
+</code></pre></div>
+<p>If the token is valid, you'll see a JSON response with version info. If not, you'll see a <code>401</code> error.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-48-1" name="__codelineno-48-1" href="#__codelineno-48-1"></a><span class="c1"># Test PBS token (replace with your values)</span>
+<a id="__codelineno-48-2" name="__codelineno-48-2" href="#__codelineno-48-2"></a>curl<span class="w"> </span>-k<span class="w"> </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: PBSAPIToken=glint@pbs!monitor:YOUR_SECRET&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-48-3" name="__codelineno-48-3" href="#__codelineno-48-3"></a><span class="w">  </span>https://YOUR_PBS_IP:8007/api2/json/status/datastore-usage
+</code></pre></div>
+<div class="admonition note">
+<p class="admonition-title">PVE uses <code>=</code> between token name and secret, PBS uses <code>:</code></p>
+<ul>
+<li>PVE: <code>PVEAPIToken=user@realm!token=secret</code></li>
+<li>PBS: <code>PBSAPIToken=user@realm!token:secret</code></li>
+</ul>
+</div>
+<h3 id="checking-if-glint-can-reach-proxmox">Checking if Glint Can Reach Proxmox<a class="headerlink" href="#checking-if-glint-can-reach-proxmox" title="Permanent link">&para;</a></h3>
+<p>From the machine where Glint is running:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-49-1" name="__codelineno-49-1" href="#__codelineno-49-1"></a><span class="c1"># Test network connectivity to PVE (should show &quot;Connected&quot;)</span>
+<a id="__codelineno-49-2" name="__codelineno-49-2" href="#__codelineno-49-2"></a>curl<span class="w"> </span>-k<span class="w"> </span>-s<span class="w"> </span>-o<span class="w"> </span>/dev/null<span class="w"> </span>-w<span class="w"> </span><span class="s2">&quot;HTTP %{http_code}\n&quot;</span><span class="w"> </span>https://YOUR_PVE_IP:8006/api2/json/version
+<a id="__codelineno-49-3" name="__codelineno-49-3" href="#__codelineno-49-3"></a>
+<a id="__codelineno-49-4" name="__codelineno-49-4" href="#__codelineno-49-4"></a><span class="c1"># Test network connectivity to PBS (if using)</span>
+<a id="__codelineno-49-5" name="__codelineno-49-5" href="#__codelineno-49-5"></a>curl<span class="w"> </span>-k<span class="w"> </span>-s<span class="w"> </span>-o<span class="w"> </span>/dev/null<span class="w"> </span>-w<span class="w"> </span><span class="s2">&quot;HTTP %{http_code}\n&quot;</span><span class="w"> </span>https://YOUR_PBS_IP:8007/api2/json/version
+</code></pre></div>
+<ul>
+<li><code>HTTP 200</code> or <code>HTTP 401</code> --- network is fine (401 just means you didn't pass a token)</li>
+<li><code>HTTP 000</code> or <code>Connection refused</code> --- Glint can't reach the server (check firewall, IP, port)</li>
+</ul>
+<hr />
+<h2 id="resource-usage">Resource Usage<a class="headerlink" href="#resource-usage" title="Permanent link">&para;</a></h2>
+<p>Glint is designed to be lightweight:</p>
+<table>
+<thead>
+<tr>
+<th>Resource</th>
+<th>Typical</th>
+<th>Limit</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>RAM</td>
+<td>30-50 MB</td>
+<td>128 MB</td>
+</tr>
+<tr>
+<td>CPU</td>
+<td>Negligible</td>
+<td>---</td>
+</tr>
+<tr>
+<td>Disk (binary)</td>
+<td>~10 MB</td>
+<td>---</td>
+</tr>
+<tr>
+<td>Disk (data)</td>
+<td>~20-50 MB</td>
+<td>Depends on history retention</td>
+</tr>
+</tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.tracking", "navigation.sections", "navigation.expand", "navigation.top", "content.code.copy", "content.code.annotate", "search.suggest", "search.highlight"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
