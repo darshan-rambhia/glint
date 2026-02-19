@@ -170,6 +170,14 @@ linters:
         linters:
           - revive
 
+      # Taint analysis false positives — URLs from config, log data from request metadata
+      - text: "G704: SSRF via taint analysis"
+        linters:
+          - gosec
+      - text: "G706: Log injection via taint analysis"
+        linters:
+          - gosec
+
 issues:
   max-issues-per-linter: 50
   max-same-issues: 10
