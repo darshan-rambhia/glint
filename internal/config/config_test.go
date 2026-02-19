@@ -160,6 +160,13 @@ func TestLoad_FromYAML(t *testing.T) {
 	assert.Equal(t, 85.0, cfg.Alerts.DatastoreFull.Threshold)
 }
 
+func TestLoad_FileNotFound(t *testing.T) {
+	clearEnv(t)
+	_, err := Load("/nonexistent/path/glint.yml")
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrConfigFileNotFound)
+}
+
 func TestLoad_Defaults(t *testing.T) {
 	clearEnv(t)
 	path := writeYAML(t, minimalYAML)

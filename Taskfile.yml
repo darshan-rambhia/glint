@@ -19,19 +19,9 @@ tasks:
       - go run ./cmd/glint --config glint.yml
 
   test:
-    desc: Run tests
+    desc: Run tests with race detector, coverage tracking, and threshold enforcement
     cmds:
-      - go test ./... -v -count=1
-
-  test:race:
-    desc: Run tests with race detector
-    cmds:
-      - go test ./... -v -race -count=1
-
-  test:coverage:
-    desc: Run tests with coverage tracking and threshold enforcement
-    cmds:
-      - go run ./buildscripts/coverage
+      - go run ./scripts/coverage
 
   lint:
     desc: Run golangci-lint

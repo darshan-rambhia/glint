@@ -6,7 +6,7 @@
 //
 // Usage:
 //
-//	go run ./buildscripts/coverage
+//	go run ./scripts/coverage
 package main
 
 import (

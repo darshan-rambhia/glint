@@ -53,7 +53,8 @@ templ DiskRow(disk *model.Disk) {
 					hx-get={ fmt.Sprintf("/fragments/disk/%s", disk.WWN) }
 					hx-target={ fmt.Sprintf("#disk-detail-%s", disk.WWN) }
 					hx-swap="innerHTML"
-					hx-trigger="click">
+					hx-trigger="click"
+				>
 					Details
 				</button>
 			}

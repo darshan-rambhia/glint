@@ -38,7 +38,7 @@ jobs:
       - name: Generate templates
         run: templ generate
       - name: Run tests with coverage
-        run: go run ./buildscripts/coverage
+        run: go run ./scripts/coverage
       - name: Upload coverage report
         if: always()
         uses: actions/upload-artifact@v6

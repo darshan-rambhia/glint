@@ -62,16 +62,18 @@ templ NodeCard(instance string, node *model.Node) {
 				</div>
 			</div>
 			<div class="sparkline-row">
-				<div class="sparkline-container"
+				<div
+					class="sparkline-container"
 					hx-get={ fmt.Sprintf("/fragments/sparkline/node/%s/%s?hours=24&metric=cpu", instance, node.Name) }
 					hx-trigger="load"
-					hx-swap="innerHTML">
-				</div>
-				<div class="sparkline-container"
+					hx-swap="innerHTML"
+				></div>
+				<div
+					class="sparkline-container"
 					hx-get={ fmt.Sprintf("/fragments/sparkline/node/%s/%s?hours=24&metric=memory", instance, node.Name) }
 					hx-trigger="load"
-					hx-swap="innerHTML">
-				</div>
+					hx-swap="innerHTML"
+				></div>
 			</div>
 		}
 	</div>

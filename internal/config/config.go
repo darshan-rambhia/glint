@@ -2,6 +2,7 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"net/url"
 	"os"
@@ -11,6 +12,9 @@ import (
 
 	"gopkg.in/yaml.v3"
 )
+
+// ErrConfigFileNotFound is returned by Load when the specified config file does not exist.
+var ErrConfigFileNotFound = errors.New("config file not found")
 
 // Config is the top-level Glint configuration.
 type Config struct {
@@ -121,14 +125,18 @@ func (d Duration) MarshalYAML() (interface{}, error) {
 	return d.String(), nil
 }
 
-// Load reads configuration from a YAML file. If the file does not exist or is
-// empty, it falls back to environment variables for single-instance setup.
+// Load reads configuration from a YAML file. If no path is given, it falls
+// back to environment variables for single-instance setup. If a path is given
+// and the file does not exist, ErrConfigFileNotFound is returned.
 func Load(path string) (*Config, error) {
 	cfg := defaults()
 
 	if path != "" {
 		data, err := os.ReadFile(path)
-		if err != nil && !os.IsNotExist(err) {
+		if os.IsNotExist(err) {
+			return nil, fmt.Errorf("%w: %s", ErrConfigFileNotFound, path)
+		}
+		if err != nil {
 			return nil, fmt.Errorf("reading config: %w", err)
 		}
 		if len(data) > 0 {

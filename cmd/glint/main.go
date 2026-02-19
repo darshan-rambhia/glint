@@ -85,7 +85,14 @@ func main() {
 	// Load configuration
 	cfg, err := config.Load(*configPath)
 	if err != nil {
-		slog.Error("loading config", "error", err)
+		if errors.Is(err, config.ErrConfigFileNotFound) {
+			fmt.Fprintf(os.Stderr, "error: %s\n\n", err)
+			fmt.Fprintf(os.Stderr, "Copy the example config to get started:\n")
+			fmt.Fprintf(os.Stderr, "  cp glint.example.yml %s\n\n", *configPath)
+			fmt.Fprintf(os.Stderr, "Docs: https://darshan-rambhia.github.io/glint/configuration/\n")
+		} else {
+			fmt.Fprintf(os.Stderr, "error: loading config (%s): %s\n", *configPath, err)
+		}
 		os.Exit(1)
 	}
 
