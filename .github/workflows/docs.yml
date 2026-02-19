@@ -30,7 +30,7 @@ jobs:
 
       - name: Install tools
         run: |
-          pip install mkdocs-material mike
+          pip install "mkdocs-material" "mkdocs<2" mike
           go install github.com/a-h/templ/cmd/templ@latest
           go install github.com/swaggo/swag/cmd/swag@latest
 
@@ -56,4 +56,4 @@ jobs:
         if: github.ref == 'refs/heads/main'
         run: |
           mike deploy --push dev
-          mike set-default --push latest
+          mike set-default --push dev
