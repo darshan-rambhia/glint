@@ -167,6 +167,39 @@ func TestLoad_FileNotFound(t *testing.T) {
 	assert.ErrorIs(t, err, ErrConfigFileNotFound)
 }
 
+func TestLoad_EnvVarSubstitution(t *testing.T) {
+	clearEnv(t)
+	t.Setenv("PVE_TOKEN_ID", "glint@pam!monitor")
+	t.Setenv("PVE_TOKEN_SECRET", "test-secret-uuid")
+
+	path := writeYAML(t, `
+pve:
+  - name: main
+    host: "https://192.168.1.1:8006"
+    token_id: "${PVE_TOKEN_ID}"
+    token_secret: "${PVE_TOKEN_SECRET}"
+`)
+	cfg, err := Load(path)
+	require.NoError(t, err)
+	assert.Equal(t, "glint@pam!monitor", cfg.PVE[0].TokenID)
+	assert.Equal(t, "test-secret-uuid", cfg.PVE[0].TokenSecret)
+}
+
+func TestLoad_EnvVarSubstitution_Unset(t *testing.T) {
+	clearEnv(t)
+
+	path := writeYAML(t, `
+pve:
+  - name: main
+    host: "https://192.168.1.1:8006"
+    token_id: "${PVE_TOKEN_ID}"
+    token_secret: "${PVE_TOKEN_SECRET}"
+`)
+	_, err := Load(path)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "token_id is required")
+}
+
 func TestLoad_Defaults(t *testing.T) {
 	clearEnv(t)
 	path := writeYAML(t, minimalYAML)

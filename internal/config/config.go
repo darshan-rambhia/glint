@@ -6,12 +6,16 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
 	"gopkg.in/yaml.v3"
 )
+
+// envVarPattern matches ${VAR_NAME} placeholders in config values.
+var envVarPattern = regexp.MustCompile(`\$\{([^}]+)\}`)
 
 // ErrConfigFileNotFound is returned by Load when the specified config file does not exist.
 var ErrConfigFileNotFound = errors.New("config file not found")
@@ -140,7 +144,7 @@ func Load(path string) (*Config, error) {
 			return nil, fmt.Errorf("reading config: %w", err)
 		}
 		if len(data) > 0 {
-			if err := yaml.Unmarshal(data, cfg); err != nil {
+			if err := yaml.Unmarshal(expandEnvVars(data), cfg); err != nil {
 				return nil, fmt.Errorf("parsing config: %w", err)
 			}
 		}
@@ -259,6 +263,16 @@ func defaults() *Config {
 		HistoryHours:   48,
 		WorkerPoolSize: 4,
 	}
+}
+
+// expandEnvVars replaces ${VAR_NAME} placeholders in raw YAML with the
+// corresponding environment variable values. Unset variables are replaced
+// with an empty string, which will then fail validation with a clear error.
+func expandEnvVars(data []byte) []byte {
+	return envVarPattern.ReplaceAllFunc(data, func(match []byte) []byte {
+		key := string(match[2 : len(match)-1]) // strip ${ and }
+		return []byte(os.Getenv(key))
+	})
 }
 
 func applyEnvOverrides(cfg *Config) {
