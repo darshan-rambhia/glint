@@ -24,7 +24,7 @@ const (
 func ParseSCSIText(text string) []model.SMARTAttribute {
 	var attrs []model.SMARTAttribute
 
-	for _, line := range strings.Split(text, "\n") {
+	for line := range strings.SplitSeq(text, "\n") {
 		line = strings.TrimSpace(line)
 		if line == "" {
 			continue
@@ -47,13 +47,13 @@ func ParseSCSIText(text string) []model.SMARTAttribute {
 
 		// Power-on hours: "Number of hours powered up = 12345.23"
 		if strings.HasPrefix(lower, "number of hours powered up") {
-			if idx := strings.Index(line, "="); idx >= 0 {
-				val := strings.TrimSpace(line[idx+1:])
+			if _, after, ok := strings.Cut(line, "="); ok {
+				val := strings.TrimSpace(after)
 				// May be a float like "12345.23" — truncate to whole hours.
 				if dotIdx := strings.Index(val, "."); dotIdx >= 0 {
 					val = val[:dotIdx]
 				}
-				if h, err := strconv.Atoi(strings.ReplaceAll(val, ",", "")); err == nil {
+				if h, err := strconv.Atoi(strings.ReplaceAll(val, ",", "")); err == nil && h >= 0 {
 					attrs = append(attrs, model.SMARTAttribute{
 						ID:        SCSIPowerOnHours,
 						Name:      "Power On Hours",
@@ -72,8 +72,8 @@ func ParseSCSIText(text string) []model.SMARTAttribute {
 			// Last field should be "HH:MM"
 			if len(parts) > 0 {
 				hm := parts[len(parts)-1]
-				if colonIdx := strings.Index(hm, ":"); colonIdx >= 0 {
-					if h, err := strconv.Atoi(hm[:colonIdx]); err == nil {
+				if before, _, ok := strings.Cut(hm, ":"); ok {
+					if h, err := strconv.Atoi(before); err == nil && h >= 0 {
 						attrs = append(attrs, model.SMARTAttribute{
 							ID:        SCSIPowerOnHours,
 							Name:      "Power On Hours",
