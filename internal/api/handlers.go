@@ -2,6 +2,7 @@
 package api
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -10,6 +11,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/a-h/templ"
 	"github.com/darshan-rambhia/glint/internal/cache"
 	"github.com/darshan-rambhia/glint/internal/store"
 	"github.com/darshan-rambhia/glint/templates"
@@ -103,6 +105,38 @@ func (s *Server) registerRoutes() {
 	))
 }
 
+// renderHTML renders a templ component to a buffer first, then writes the
+// buffer to the response. This ensures rendering errors can be returned as a
+// proper 500 before any bytes reach the client.
+func renderHTML(w http.ResponseWriter, r *http.Request, component templ.Component) {
+	var buf bytes.Buffer
+	if err := component.Render(r.Context(), &buf); err != nil {
+		slog.Error("rendering component", "path", r.URL.Path, "error", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	if _, err := buf.WriteTo(w); err != nil {
+		// Client disconnected after headers sent — nothing to recover.
+		slog.Debug("writing HTML response", "path", r.URL.Path, "error", err)
+	}
+}
+
+// writeJSON marshals v to JSON into a buffer first, then writes it to the
+// response. This ensures marshalling errors can be returned as a proper 500.
+func writeJSON(w http.ResponseWriter, r *http.Request, v any) {
+	data, err := json.Marshal(v)
+	if err != nil {
+		slog.Error("encoding JSON response", "path", r.URL.Path, "error", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if _, err := w.Write(data); err != nil {
+		slog.Debug("writing JSON response", "path", r.URL.Path, "error", err)
+	}
+}
+
 // @Summary Dashboard page
 // @Description Full HTML dashboard page
 // @Produce html
@@ -114,12 +148,7 @@ func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	snap := s.cache.Snapshot()
-	component := templates.Dashboard(snap)
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if err := component.Render(r.Context(), w); err != nil {
-		slog.Error("rendering dashboard", "error", err)
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-	}
+	renderHTML(w, r, templates.Dashboard(snap))
 }
 
 // @Summary Node cards fragment
@@ -129,11 +158,7 @@ func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
 // @Router /fragments/nodes [get]
 func (s *Server) handleNodesFragment(w http.ResponseWriter, r *http.Request) {
 	snap := s.cache.Snapshot()
-	component := templates.NodesFragment(snap)
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if err := component.Render(r.Context(), w); err != nil {
-		slog.Error("rendering nodes fragment", "error", err)
-	}
+	renderHTML(w, r, templates.NodesFragment(snap))
 }
 
 // @Summary Guest table fragment
@@ -143,11 +168,7 @@ func (s *Server) handleNodesFragment(w http.ResponseWriter, r *http.Request) {
 // @Router /fragments/guests [get]
 func (s *Server) handleGuestsFragment(w http.ResponseWriter, r *http.Request) {
 	snap := s.cache.Snapshot()
-	component := templates.GuestsFragment(snap)
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if err := component.Render(r.Context(), w); err != nil {
-		slog.Error("rendering guests fragment", "error", err)
-	}
+	renderHTML(w, r, templates.GuestsFragment(snap))
 }
 
 // @Summary Backup status fragment
@@ -157,11 +178,7 @@ func (s *Server) handleGuestsFragment(w http.ResponseWriter, r *http.Request) {
 // @Router /fragments/backups [get]
 func (s *Server) handleBackupsFragment(w http.ResponseWriter, r *http.Request) {
 	snap := s.cache.Snapshot()
-	component := templates.BackupsFragment(snap)
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if err := component.Render(r.Context(), w); err != nil {
-		slog.Error("rendering backups fragment", "error", err)
-	}
+	renderHTML(w, r, templates.BackupsFragment(snap))
 }
 
 // @Summary Events fragment
@@ -171,11 +188,7 @@ func (s *Server) handleBackupsFragment(w http.ResponseWriter, r *http.Request) {
 // @Router /fragments/events [get]
 func (s *Server) handleEventsFragment(w http.ResponseWriter, r *http.Request) {
 	snap := s.cache.Snapshot()
-	component := templates.EventsFragment(snap)
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if err := component.Render(r.Context(), w); err != nil {
-		slog.Error("rendering events fragment", "error", err)
-	}
+	renderHTML(w, r, templates.EventsFragment(snap))
 }
 
 // @Summary Disk health fragment
@@ -185,11 +198,7 @@ func (s *Server) handleEventsFragment(w http.ResponseWriter, r *http.Request) {
 // @Router /fragments/disks [get]
 func (s *Server) handleDisksFragment(w http.ResponseWriter, r *http.Request) {
 	snap := s.cache.Snapshot()
-	component := templates.DisksFragment(snap)
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if err := component.Render(r.Context(), w); err != nil {
-		slog.Error("rendering disks fragment", "error", err)
-	}
+	renderHTML(w, r, templates.DisksFragment(snap))
 }
 
 // @Summary Disk detail fragment
@@ -207,11 +216,7 @@ func (s *Server) handleDiskDetailFragment(w http.ResponseWriter, r *http.Request
 		http.NotFound(w, r)
 		return
 	}
-	component := templates.DiskDetail(disk)
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if err := component.Render(r.Context(), w); err != nil {
-		slog.Error("rendering disk detail", "error", err)
-	}
+	renderHTML(w, r, templates.DiskDetail(disk))
 }
 
 // @Summary Node sparkline data
@@ -247,10 +252,7 @@ func (s *Server) handleNodeSparkline(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(points); err != nil {
-		slog.Error("encoding node sparkline response", "error", err)
-	}
+	writeJSON(w, r, points)
 }
 
 // @Summary Guest sparkline data
@@ -279,10 +281,7 @@ func (s *Server) handleGuestSparkline(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(points); err != nil {
-		slog.Error("encoding guest sparkline response", "error", err)
-	}
+	writeJSON(w, r, points)
 }
 
 // @Summary Node sparkline SVG fragment
@@ -319,10 +318,7 @@ func (s *Server) handleNodeSparklineSVG(w http.ResponseWriter, r *http.Request) 
 	}
 
 	label := fmt.Sprintf("%s %dh", metric, hours)
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if err := components.SparklineSVG(points, label).Render(r.Context(), w); err != nil {
-		slog.Error("rendering node sparkline SVG", "error", err)
-	}
+	renderHTML(w, r, components.SparklineSVG(points, label))
 }
 
 // @Summary Guest sparkline SVG fragment
@@ -351,10 +347,7 @@ func (s *Server) handleGuestSparklineSVG(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if err := components.SparklineSVG(points, "cpu 24h").Render(r.Context(), w); err != nil {
-		slog.Error("rendering guest sparkline SVG", "error", err)
-	}
+	renderHTML(w, r, components.SparklineSVG(points, "cpu 24h"))
 }
 
 // @Summary Health check
@@ -371,18 +364,13 @@ func (s *Server) handleHealthz(w http.ResponseWriter, r *http.Request) {
 		status = "no_data"
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(map[string]interface{}{
-		"status":    status,
-		"timestamp": time.Now().Unix(),
-		"collectors": func() map[string]string {
-			result := make(map[string]string, len(snap.LastPoll))
-			for k, v := range snap.LastPoll {
-				result[k] = fmt.Sprintf("%ds ago", int(time.Since(v).Seconds()))
-			}
-			return result
-		}(),
-	}); err != nil {
-		slog.Error("encoding healthz response", "error", err)
+	collectors := make(map[string]string, len(snap.LastPoll))
+	for k, v := range snap.LastPoll {
+		collectors[k] = fmt.Sprintf("%ds ago", int(time.Since(v).Seconds()))
 	}
+	writeJSON(w, r, map[string]any{
+		"status":     status,
+		"timestamp":  time.Now().Unix(),
+		"collectors": collectors,
+	})
 }

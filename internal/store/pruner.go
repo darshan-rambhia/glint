@@ -87,7 +87,10 @@ func (p *Pruner) prune() {
 			slog.Error("pruning failed", "table", t.name, "error", err)
 			continue
 		}
-		rows, _ := result.RowsAffected()
+		rows, err := result.RowsAffected()
+		if err != nil {
+			slog.Warn("getting rows affected after prune", "table", t.name, "error", err)
+		}
 		if rows > 0 {
 			slog.Info("pruned old data", "table", t.name, "rows", rows)
 		}
