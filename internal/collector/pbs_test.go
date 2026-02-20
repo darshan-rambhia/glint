@@ -18,6 +18,14 @@ import (
 // Test fixtures — realistic PBS API response JSON
 // ---------------------------------------------------------------------------
 
+const datastoreStatusJSON = `{
+	"data": {
+		"total": 1073741824000,
+		"used": 536870912000,
+		"avail": 536870912000
+	}
+}`
+
 const datastoreUsageJSON = `{
 	"data": [
 		{
@@ -167,7 +175,7 @@ func TestPBS_collectDatastoreUsage(t *testing.T) {
 	})
 	coll, _, _, _ := newTestPBSCollector(t, handler)
 
-	datastores, err := coll.collectDatastoreUsage(context.Background())
+	datastores, err := coll.collectAllDatastoreUsage(context.Background())
 	require.NoError(t, err)
 	require.Len(t, datastores, 2)
 
@@ -260,10 +268,13 @@ func TestPBS_collectTasks(t *testing.T) {
 func TestPBS_Collect_DatastoreFiltering(t *testing.T) {
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch {
-		case r.URL.Path == "/api2/json/status/datastore-usage":
-			fmt.Fprint(w, datastoreUsageJSON)
+		case r.URL.Path == "/api2/json/admin/datastore/local-backups/status":
+			fmt.Fprint(w, datastoreStatusJSON)
 		case r.URL.Path == "/api2/json/admin/datastore/local-backups/snapshots":
 			fmt.Fprint(w, snapshotsJSON)
+		case r.URL.Path == "/api2/json/admin/datastore/offsite/status":
+			t.Error("should not query offsite status when filtered")
+			fmt.Fprint(w, datastoreStatusJSON)
 		case r.URL.Path == "/api2/json/admin/datastore/offsite/snapshots":
 			t.Error("should not query offsite snapshots when filtered")
 			fmt.Fprint(w, `{"data": []}`)
@@ -336,13 +347,13 @@ func TestPBS_Collect_FullCycle(t *testing.T) {
 	require.Contains(t, snap.Datastores, "test-pbs")
 	assert.Len(t, snap.Datastores["test-pbs"], 2)
 
-	// Backups — only latest per backup_id kept
+	// Backups — only latest per (datastore, backup_id) kept
 	require.Contains(t, snap.Backups, "test-pbs")
 	backups := snap.Backups["test-pbs"]
-	// backup_id "101": two snapshots, only latest (1700000000) kept
-	// backup_id "200": one snapshot
+	// "local-backups/101": two snapshots across the datastore, only latest (1700000000) kept
+	// "local-backups/200": one snapshot
 	assert.Len(t, backups, 2)
-	b101 := backups["101"]
+	b101 := backups["local-backups/101"]
 	require.NotNil(t, b101)
 	assert.Equal(t, int64(1700000000), b101.BackupTime) // latest
 
@@ -376,7 +387,7 @@ func TestPBS_collectDatastoreUsage_APIError(t *testing.T) {
 	})
 	coll, _, _, _ := newTestPBSCollector(t, handler)
 
-	_, err := coll.collectDatastoreUsage(context.Background())
+	_, err := coll.collectAllDatastoreUsage(context.Background())
 	require.Error(t, err)
 }
 
@@ -386,7 +397,7 @@ func TestPBS_collectDatastoreUsage_InvalidJSON(t *testing.T) {
 	})
 	coll, _, _, _ := newTestPBSCollector(t, handler)
 
-	_, err := coll.collectDatastoreUsage(context.Background())
+	_, err := coll.collectAllDatastoreUsage(context.Background())
 	require.Error(t, err)
 }
 
@@ -507,6 +518,27 @@ func TestPBS_Collect_TasksFail_StillSucceeds(t *testing.T) {
 	snap := ch.Snapshot()
 	_, hasTasks := snap.Tasks["test-pbs"]
 	assert.False(t, hasTasks, "tasks should not be in cache when nil")
+}
+
+func TestPBS_Collect_Tasks403_StillSucceeds(t *testing.T) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/api2/json/status/datastore-usage":
+			fmt.Fprint(w, `{"data": []}`)
+		default:
+			// Tasks endpoint returns 403 (token lacks Sys.Audit)
+			w.WriteHeader(http.StatusForbidden)
+			fmt.Fprint(w, "permission denied")
+		}
+	})
+	coll, ch, _, _ := newTestPBSCollector(t, handler)
+
+	err := coll.Collect(context.Background())
+	require.NoError(t, err) // 403 on tasks is a warning, not fatal
+
+	snap := ch.Snapshot()
+	_, hasTasks := snap.Tasks["test-pbs"]
+	assert.False(t, hasTasks, "tasks should not be in cache on 403")
 }
 
 func TestPBS_ApiGet_CancelledContext(t *testing.T) {

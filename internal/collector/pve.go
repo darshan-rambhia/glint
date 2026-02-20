@@ -4,10 +4,12 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"sync"
@@ -15,6 +17,7 @@ import (
 
 	"github.com/darshan-rambhia/glint/internal/cache"
 	"github.com/darshan-rambhia/glint/internal/model"
+	"github.com/darshan-rambhia/glint/internal/smart"
 	"github.com/darshan-rambhia/glint/internal/store"
 )
 
@@ -44,8 +47,12 @@ type PVECollector struct {
 
 // NewPVECollector creates a new PVE collector.
 func NewPVECollector(cfg PVEConfig, pool *WorkerPool, c *cache.Cache, s *store.Store) *PVECollector {
+	if cfg.Insecure {
+		slog.Warn("TLS certificate verification disabled — connection is vulnerable to MITM attacks",
+			"instance", cfg.Name, "host", cfg.Host)
+	}
 	transport := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: cfg.Insecure},
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: cfg.Insecure}, //nolint:gosec // user opt-in, warned above
 	}
 	return &PVECollector{
 		config: cfg,
@@ -250,6 +257,16 @@ func (p *PVECollector) apiGet(ctx context.Context, path string) ([]byte, error) 
 // pveResponse wraps the standard PVE API response envelope.
 type pveResponse struct {
 	Data json.RawMessage `json:"data"`
+}
+
+// pveNormalizeSentinel converts PVE sentinel strings like "unknown", "none",
+// or "-" to an empty string so callers can use a simple empty-check.
+func pveNormalizeSentinel(s string) string {
+	switch strings.TrimSpace(s) {
+	case "", "unknown", "none", "-":
+		return ""
+	}
+	return s
 }
 
 func (p *PVECollector) discoverNodes(ctx context.Context) error {
@@ -473,7 +490,11 @@ func (p *PVECollector) collectGuestType(ctx context.Context, nodeName, guestType
 }
 
 func (p *PVECollector) collectDisks(ctx context.Context, nodeName string) ([]*model.Disk, error) {
-	body, err := p.apiGet(ctx, fmt.Sprintf("/api2/json/nodes/%s/disks/list", nodeName))
+	// skipsmart=1 tells PVE to skip its own internal smartctl scan when listing disks.
+	// Without it, PVE runs smartctl for every disk during the list call, which can cause
+	// timeouts on drives that are slow to respond (e.g. spinning HDDs in standby).
+	// We collect SMART data ourselves in a separate per-disk call below.
+	body, err := p.apiGet(ctx, fmt.Sprintf("/api2/json/nodes/%s/disks/list?skipsmart=1", nodeName))
 	if err != nil {
 		return nil, err
 	}
@@ -489,33 +510,49 @@ func (p *PVECollector) collectDisks(ctx context.Context, nodeName string) ([]*mo
 		Serial  string `json:"serial"`
 		WWN     string `json:"wwn"`
 		Size    int64  `json:"size"`
-		Type    string `json:"type"` // "hdd", "ssd", "nvme"
+		Type    string `json:"type"` // "hdd", "ssd", "nvme", or "unknown"
+		RPM     int    `json:"rpm"`  // rotation speed; 0 = solid-state
 	}
 	if err := json.Unmarshal(resp.Data, &rawDisks); err != nil {
 		return nil, fmt.Errorf("parsing disk data: %w", err)
 	}
 
+	slog.Debug("PVE disk list raw", "instance", p.config.Name, "node", nodeName, "count", len(rawDisks))
 	var disks []*model.Disk
 	now := time.Now()
 	for _, rd := range rawDisks {
-		wwn := rd.WWN
+		slog.Debug("PVE disk entry", "node", nodeName, "devpath", rd.DevPath,
+			"model", rd.Model, "serial", rd.Serial, "wwn", rd.WWN, "type", rd.Type, "rpm", rd.RPM, "size", rd.Size)
+		// PVE returns "unknown" (literal string) for WWN/type when the drive
+		// doesn't expose one — treat these sentinel values as empty so the
+		// fallback chain below picks a proper unique identity.
+		wwn := pveNormalizeSentinel(rd.WWN)
 		if wwn == "" {
-			wwn = rd.Serial // fallback
+			wwn = pveNormalizeSentinel(rd.Serial) // fallback to serial
 		}
 		if wwn == "" {
+			wwn = rd.DevPath // last resort — stable enough for non-hot-swap homelab drives
+		}
+		if wwn == "" {
+			slog.Warn("PVE disk skipped: no identity", "node", nodeName, "model", rd.Model)
 			continue // skip disks with no identity
 		}
 
-		diskType := rd.Type
+		diskType := pveNormalizeSentinel(rd.Type)
 		protocol := "ata"
 		if strings.HasPrefix(rd.DevPath, "/dev/nvme") {
 			protocol = "nvme"
-			if diskType == "" {
-				diskType = "nvme"
-			}
+			diskType = "nvme"
 		}
 		if diskType == "" {
-			diskType = "hdd"
+			// PVE sources RPM from the kernel's /sys/block/*/queue/rotational.
+			// rpm > 0: spinning disk with known RPM; rpm == -1: rotational but
+			// RPM unknown (PVE's sentinel); rpm == 0: solid-state / NVMe.
+			if rd.RPM != 0 {
+				diskType = "hdd"
+			} else {
+				diskType = "ssd"
+			}
 		}
 
 		disk := &model.Disk{
@@ -541,13 +578,35 @@ func (p *PVECollector) collectDisks(ctx context.Context, nodeName string) ([]*mo
 		disks = append(disks, disk)
 	}
 
+	slog.Debug("PVE disks collected", "instance", p.config.Name, "node", nodeName,
+		"listed", len(rawDisks), "collected", len(disks))
 	return disks, nil
 }
 
 func (p *PVECollector) collectSMART(ctx context.Context, nodeName string, disk *model.Disk) error {
-	devName := strings.TrimPrefix(disk.DevPath, "/dev/")
-	body, err := p.apiGet(ctx, fmt.Sprintf("/api2/json/nodes/%s/disks/smart?disk=%s", nodeName, devName))
+	return p.collectSMARTWithType(ctx, nodeName, disk, "")
+}
+
+func (p *PVECollector) collectSMARTWithType(ctx context.Context, nodeName string, disk *model.Disk, smartType string) error {
+	u := fmt.Sprintf("/api2/json/nodes/%s/disks/smart?disk=%s", nodeName, url.QueryEscape(disk.DevPath))
+	if smartType != "" {
+		u += "&type=" + url.QueryEscape(smartType)
+	}
+	body, err := p.apiGet(ctx, u)
 	if err != nil {
+		// Some PVE versions reject the "type" query parameter with a 400.
+		// Cascade through the fallback chain before surfacing the error.
+		var apiErr *APIError
+		if errors.As(err, &apiErr) && apiErr.StatusCode == 400 {
+			switch smartType {
+			case "sat":
+				slog.Debug("PVE SMART sat rejected (400), retrying with scsi", "disk", disk.DevPath)
+				return p.collectSMARTWithType(ctx, nodeName, disk, "scsi")
+			case "scsi":
+				slog.Debug("PVE SMART scsi also rejected (400), no type fallback available", "disk", disk.DevPath)
+				return nil
+			}
+		}
 		return err
 	}
 
@@ -582,41 +641,78 @@ func (p *PVECollector) collectSMART(ctx context.Context, nodeName string, disk *
 		}
 	}
 
-	// Parse attributes based on protocol
-	// For ATA disks, attributes come as a structured array
-	// For NVMe, we parse the text field
+	// Parse SMART attributes using the smart package.
+	var attrs []model.SMARTAttribute
 	if disk.Protocol == "nvme" && smartData.Text != "" {
-		// NVMe parsing handled by smart package (will be integrated in Phase 5)
-		disk.Protocol = "nvme"
-	} else if smartData.Attributes != nil {
-		// ATA attribute parsing handled by smart package (will be integrated in Phase 5)
-		disk.Protocol = "ata"
+		parsed, err := smart.ParseNVMeText(smartData.Text)
+		if err != nil {
+			slog.Debug("parsing NVMe SMART text", "disk", disk.DevPath, "error", err)
+		} else {
+			attrs = parsed
+		}
+	} else if len(smartData.Attributes) > 0 {
+		parsed, err := smart.ParseATAAttributes(smartData.Attributes)
+		if err != nil {
+			slog.Debug("parsing ATA SMART attributes", "disk", disk.DevPath, "error", err)
+		} else {
+			attrs = parsed
+		}
+	} else if smartType == "scsi" && smartData.Text != "" {
+		// SCSI text output — parse for temperature/power-on hours.
+		attrs = smart.ParseSCSIText(smartData.Text)
+		slog.Debug("PVE SMART SCSI text parsed", "disk", disk.DevPath, "attrs", len(attrs))
+	} else if disk.Protocol == "ata" && smartType == "" {
+		// PVE returned no structured data (common for SATA drives behind an HBA).
+		// Try sat (SCSI-to-ATA Translation passthrough), then scsi.
+		slog.Debug("PVE SMART retrying with sat", "disk", disk.DevPath)
+		return p.collectSMARTWithType(ctx, nodeName, disk, "sat")
+	} else if disk.Protocol == "ata" && smartType == "sat" {
+		// SAT also returned nothing — try SCSI mode sense (works for drives
+		// that respond to SCSI commands rather than ATA commands).
+		slog.Debug("PVE SMART retrying with scsi", "disk", disk.DevPath)
+		return p.collectSMARTWithType(ctx, nodeName, disk, "scsi")
 	}
 
-	// Extract temperature from attributes if present
-	for _, attr := range smartData.Attributes {
-		id, ok := attr["id"].(float64)
-		if !ok {
-			continue
-		}
-		if int(id) == 194 { // Temperature_Celsius
-			if raw, ok := attr["raw"].(string); ok {
-				parts := strings.Fields(raw)
-				if len(parts) > 0 {
-					if temp, err := strconv.Atoi(parts[0]); err == nil {
-						disk.Temperature = &temp
-					}
+	disk.Attributes = attrs
+	smart.EvaluateDisk(disk)
+
+	// Extract scalar metrics from parsed attributes.
+	for i := range disk.Attributes {
+		a := &disk.Attributes[i]
+		switch disk.Protocol {
+		case "nvme":
+			switch a.ID {
+			case smart.NVMeTemperature:
+				t := int(a.RawValue)
+				disk.Temperature = &t
+			case smart.NVMePowerOnHours:
+				h := int(a.RawValue)
+				disk.PowerOnHours = &h
+			case smart.NVMePercentageUsed:
+				if disk.Wearout == nil {
+					remaining := 100 - int(a.RawValue)
+					disk.Wearout = &remaining
 				}
 			}
-		}
-		if int(id) == 9 { // Power_On_Hours
-			if raw, ok := attr["raw"].(string); ok {
-				parts := strings.Fields(raw)
-				if len(parts) > 0 {
-					if hours, err := strconv.Atoi(parts[0]); err == nil {
-						disk.PowerOnHours = &hours
-					}
+		default: // ata (also handles SCSI pseudo-attrs from type=scsi fallback)
+			switch a.ID {
+			case 194: // ATA Temperature_Celsius
+				t := int(a.RawValue)
+				disk.Temperature = &t
+			case 190: // ATA Airflow_Temperature_Cel (fallback)
+				if disk.Temperature == nil {
+					t := int(a.RawValue)
+					disk.Temperature = &t
 				}
+			case 9: // ATA Power_On_Hours
+				h := int(a.RawValue)
+				disk.PowerOnHours = &h
+			case smart.SCSITemperature: // SCSI Current Drive Temperature
+				t := int(a.RawValue)
+				disk.Temperature = &t
+			case smart.SCSIPowerOnHours: // SCSI power-on hours
+				h := int(a.RawValue)
+				disk.PowerOnHours = &h
 			}
 		}
 	}

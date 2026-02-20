@@ -5,10 +5,13 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"time"
 
-	"github.com/darshan-rambhia/glint/internal/model"
 	_ "github.com/mattn/go-sqlite3"
+
+	"github.com/darshan-rambhia/glint/internal/model"
 )
 
 // Store wraps a SQLite database for Glint data persistence.
@@ -18,9 +21,21 @@ type Store struct {
 
 // New opens or creates a SQLite database at the given path and runs migrations.
 func New(dbPath string) (*Store, error) {
+	if dir := filepath.Dir(dbPath); dir != "." {
+		if err := os.MkdirAll(dir, 0o750); err != nil {
+			return nil, fmt.Errorf("creating database directory: %w", err)
+		}
+	}
+
 	db, err := sql.Open("sqlite3", dbPath+"?_journal_mode=WAL&_busy_timeout=5000&_synchronous=NORMAL")
 	if err != nil {
 		return nil, fmt.Errorf("opening database %s: %w", dbPath, err)
+	}
+
+	// Restrict database file to owner-only after open (sqlite3 may create it
+	// with process-umask permissions, which is often 0644 — too permissive).
+	if err := os.Chmod(dbPath, 0o600); err != nil && !os.IsNotExist(err) {
+		return nil, fmt.Errorf("setting database file permissions: %w", err)
 	}
 
 	if err := db.Ping(); err != nil {

@@ -458,9 +458,9 @@ func TestPVE_collectDisks(t *testing.T) {
 		switch {
 		case r.URL.Path == "/api2/json/nodes/pve/disks/list":
 			fmt.Fprint(w, diskListJSON)
-		case r.URL.Path == "/api2/json/nodes/pve/disks/smart" && r.URL.Query().Get("disk") == "sda":
+		case r.URL.Path == "/api2/json/nodes/pve/disks/smart" && r.URL.Query().Get("disk") == "/dev/sda":
 			fmt.Fprint(w, smartSDAJSON)
-		case r.URL.Path == "/api2/json/nodes/pve/disks/smart" && r.URL.Query().Get("disk") == "nvme0n1":
+		case r.URL.Path == "/api2/json/nodes/pve/disks/smart" && r.URL.Query().Get("disk") == "/dev/nvme0n1":
 			fmt.Fprint(w, smartNVMeJSON)
 		default:
 			http.Error(w, "not found", http.StatusNotFound)
@@ -495,16 +495,24 @@ func TestPVE_collectDisks(t *testing.T) {
 	assert.Equal(t, 95, *nvme.Wearout) // parsed from string "95"
 }
 
-func TestPVE_collectDisks_SkipsDiskWithNoIdentity(t *testing.T) {
+func TestPVE_collectDisks_DevPathFallback(t *testing.T) {
+	// Disks with no WWN and no serial fall back to DevPath as identity so they
+	// are still collected (with a SMART error if that also fails).
 	resp := `{"data": [{"devpath": "/dev/sdb", "model": "Unknown", "serial": "", "wwn": "", "size": 100, "type": "hdd"}]}`
-	handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		fmt.Fprint(w, resp)
+	smartResp := `{"data": {"health": "PASSED", "type": "ata", "attributes": []}}`
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/api2/json/nodes/pve/disks/list" {
+			fmt.Fprint(w, resp)
+		} else {
+			fmt.Fprint(w, smartResp)
+		}
 	})
 	coll, _, _, _ := newTestPVECollector(t, handler)
 
 	disks, err := coll.collectDisks(context.Background(), "pve")
 	require.NoError(t, err)
-	assert.Empty(t, disks)
+	require.Len(t, disks, 1)
+	assert.Equal(t, "/dev/sdb", disks[0].WWN) // DevPath used as identity
 }
 
 func TestPVE_collectDisks_FallsBackToSerial(t *testing.T) {
@@ -545,9 +553,9 @@ func TestPVE_Collect_FullCycle(t *testing.T) {
 		case "/api2/json/nodes/pve/disks/smart":
 			disk := r.URL.Query().Get("disk")
 			switch disk {
-			case "sda":
+			case "/dev/sda":
 				fmt.Fprint(w, smartSDAJSON)
-			case "nvme0n1":
+			case "/dev/nvme0n1":
 				fmt.Fprint(w, smartNVMeJSON)
 			default:
 				http.Error(w, "unknown disk", 404)

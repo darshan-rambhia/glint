@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -38,8 +39,12 @@ type PBSCollector struct {
 
 // NewPBSCollector creates a new PBS collector.
 func NewPBSCollector(cfg PBSConfig, pool *WorkerPool, c *cache.Cache, s *store.Store) *PBSCollector {
+	if cfg.Insecure {
+		slog.Warn("TLS certificate verification disabled — connection is vulnerable to MITM attacks",
+			"instance", cfg.Name, "host", cfg.Host)
+	}
 	transport := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: cfg.Insecure},
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: cfg.Insecure}, //nolint:gosec // user opt-in, warned above
 	}
 	return &PBSCollector{
 		config: cfg,
@@ -61,26 +66,43 @@ func (c *PBSCollector) Collect(ctx context.Context) error {
 	now := time.Now()
 	ts := now.Unix()
 
-	// 1. Get datastore usage
-	datastores, err := c.collectDatastoreUsage(ctx)
-	if err != nil {
-		return fmt.Errorf("collecting datastore usage for %s: %w", c.config.Name, err)
-	}
+	slog.Debug("PBS collection starting", "instance", c.config.Name, "host", c.config.Host)
 
-	// Filter to configured datastores
+	// 1. Get datastore usage.
+	// When specific datastores are configured, query each one directly via the
+	// per-datastore status endpoint — this only requires datastore-scoped
+	// permissions. Fall back to the system-wide listing when no filter is set,
+	// which requires broader system permissions.
+	//
+	// If the status endpoint returns a permission error (403), we still add a
+	// stub entry so that snapshot collection proceeds — backup data is more
+	// useful than nothing. Capacity fields will be nil (unknown).
+	var datastores map[string]*model.DatastoreStatus
 	if len(c.config.Datastores) > 0 {
-		allowed := make(map[string]bool, len(c.config.Datastores))
-		for _, ds := range c.config.Datastores {
-			allowed[ds] = true
-		}
-		filtered := make(map[string]*model.DatastoreStatus)
-		for name, ds := range datastores {
-			if allowed[name] {
-				filtered[name] = ds
+		datastores = make(map[string]*model.DatastoreStatus, len(c.config.Datastores))
+		for _, dsName := range c.config.Datastores {
+			ds, err := c.collectDatastoreStatus(ctx, dsName)
+			if err != nil {
+				var apiErr *APIError
+				if errors.As(err, &apiErr) && apiErr.StatusCode == 403 {
+					slog.Warn("PBS token lacks Datastore.Audit permission; capacity unknown — grant DatastoreAudit role on /datastore/"+dsName,
+						"pbs", c.config.Name, "datastore", dsName)
+					datastores[dsName] = &model.DatastoreStatus{PBSInstance: c.config.Name, Name: dsName}
+				} else {
+					slog.Error("collecting datastore status", "pbs", c.config.Name, "datastore", dsName, "error", err)
+				}
+				continue
 			}
+			datastores[dsName] = ds
 		}
-		datastores = filtered
+	} else {
+		var err error
+		datastores, err = c.collectAllDatastoreUsage(ctx)
+		if err != nil {
+			return fmt.Errorf("collecting datastore usage for %s: %w", c.config.Name, err)
+		}
 	}
+	slog.Debug("PBS datastores ready", "instance", c.config.Name, "count", len(datastores))
 
 	// 2. Get snapshots for each datastore
 	backups := make(map[string]*model.Backup)
@@ -90,20 +112,31 @@ func (c *PBSCollector) Collect(ctx context.Context) error {
 			slog.Error("collecting snapshots", "pbs", c.config.Name, "datastore", dsName, "error", err)
 			continue
 		}
-		// Keep only latest backup per backup_id
+		slog.Debug("PBS snapshots found", "instance", c.config.Name, "datastore", dsName, "count", len(snaps))
+		// Keep latest backup per (datastore, backup_id) so that the same VMID
+		// backed up in multiple datastores is tracked independently.
 		for _, snap := range snaps {
-			key := snap.BackupID
+			key := snap.Datastore + "/" + snap.BackupID
 			if existing, ok := backups[key]; !ok || snap.BackupTime > existing.BackupTime {
 				backups[key] = snap
 			}
 		}
 	}
 
-	// 3. Get recent tasks
+	// 3. Get recent tasks.
+	// Requires Sys.Audit on /nodes/localhost. Datastore-scoped tokens typically
+	// don't have this; a 403 is logged as a warning with the fix described.
 	tasks, err := c.collectTasks(ctx)
 	if err != nil {
-		slog.Error("collecting PBS tasks", "pbs", c.config.Name, "error", err)
+		var apiErr *APIError
+		if errors.As(err, &apiErr) && apiErr.StatusCode == 403 {
+			slog.Warn("PBS token lacks Sys.Audit permission; task history unavailable — grant Sys.Audit role on /nodes/localhost",
+				"pbs", c.config.Name)
+		} else {
+			slog.Error("collecting PBS tasks", "pbs", c.config.Name, "error", err)
+		}
 	}
+	slog.Debug("PBS tasks found", "instance", c.config.Name, "count", len(tasks))
 
 	// Update cache
 	c.cache.UpdateDatastores(c.config.Name, datastores)
@@ -134,6 +167,8 @@ func (c *PBSCollector) apiGet(ctx context.Context, path string) ([]byte, error) 
 	defer cancel()
 
 	url := strings.TrimRight(c.config.Host, "/") + path
+	slog.Debug("PBS API request", "instance", c.config.Name, "url", url)
+
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("creating request for %s: %w", path, err)
@@ -151,6 +186,8 @@ func (c *PBSCollector) apiGet(ctx context.Context, path string) ([]byte, error) 
 		return nil, fmt.Errorf("reading response from %s: %w", path, err)
 	}
 
+	slog.Debug("PBS API response", "instance", c.config.Name, "path", path, "status", resp.StatusCode)
+
 	if resp.StatusCode != http.StatusOK {
 		return nil, &APIError{
 			StatusCode: resp.StatusCode,
@@ -161,7 +198,9 @@ func (c *PBSCollector) apiGet(ctx context.Context, path string) ([]byte, error) 
 	return body, nil
 }
 
-func (c *PBSCollector) collectDatastoreUsage(ctx context.Context) (map[string]*model.DatastoreStatus, error) {
+// collectAllDatastoreUsage fetches all datastores via the system-wide endpoint.
+// Requires system-level permissions; used when no specific datastores are configured.
+func (c *PBSCollector) collectAllDatastoreUsage(ctx context.Context) (map[string]*model.DatastoreStatus, error) {
 	body, err := c.apiGet(ctx, "/api2/json/status/datastore-usage")
 	if err != nil {
 		return nil, err
@@ -192,6 +231,36 @@ func (c *PBSCollector) collectDatastoreUsage(ctx context.Context) (map[string]*m
 		}
 	}
 	return datastores, nil
+}
+
+// collectDatastoreStatus fetches status for a single named datastore.
+// Only requires datastore-scoped permissions on /datastore/{name}.
+func (c *PBSCollector) collectDatastoreStatus(ctx context.Context, datastore string) (*model.DatastoreStatus, error) {
+	body, err := c.apiGet(ctx, fmt.Sprintf("/api2/json/admin/datastore/%s/status", datastore))
+	if err != nil {
+		return nil, err
+	}
+
+	var resp struct {
+		Data struct {
+			Total *int64   `json:"total"`
+			Used  *int64   `json:"used"`
+			Avail *int64   `json:"avail"`
+			Error *string  `json:"error"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(body, &resp); err != nil {
+		return nil, fmt.Errorf("parsing datastore status: %w", err)
+	}
+
+	return &model.DatastoreStatus{
+		PBSInstance: c.config.Name,
+		Name:        datastore,
+		TotalBytes:  resp.Data.Total,
+		UsedBytes:   resp.Data.Used,
+		AvailBytes:  resp.Data.Avail,
+		Error:       resp.Data.Error,
+	}, nil
 }
 
 func (c *PBSCollector) collectSnapshots(ctx context.Context, datastore string) ([]*model.Backup, error) {
@@ -235,8 +304,8 @@ func (c *PBSCollector) collectSnapshots(ctx context.Context, datastore string) (
 }
 
 func (c *PBSCollector) collectTasks(ctx context.Context) ([]*model.PBSTask, error) {
-	since := time.Now().Add(-24 * time.Hour).Unix()
-	body, err := c.apiGet(ctx, fmt.Sprintf("/api2/json/nodes/localhost/tasks?since=%d&limit=50", since))
+	since := time.Now().Add(-7 * 24 * time.Hour).Unix()
+	body, err := c.apiGet(ctx, fmt.Sprintf("/api2/json/nodes/localhost/tasks?since=%d&limit=200", since))
 	if err != nil {
 		return nil, err
 	}
