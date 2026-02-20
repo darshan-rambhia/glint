@@ -10,7 +10,7 @@ tasks:
     desc: Build the glint binary
     deps: [generate]
     cmds:
-      - go build -ldflags="-s -w" -o bin/glint ./cmd/glint
+      - go build -ldflags="-s -w" -o target/glint ./cmd/glint
 
   dev:
     desc: Run glint with hot-reload (requires air — go install github.com/air-verse/air@latest)
@@ -53,6 +53,20 @@ tasks:
     desc: Generate Swagger/OpenAPI documentation
     cmds:
       - swag init -g cmd/glint/main.go -o docs/swagger
+
+  bench:
+    desc: Run all benchmarks and save report to target/reports/bench.txt (override time with BENCH_TIME=10s)
+    vars:
+      BENCH_TIME: '{{default "3s" .BENCH_TIME}}'
+    cmds:
+      - BENCH_TIME={{.BENCH_TIME}} go run ./scripts/bench
+
+  fuzz:
+    desc: Run all fuzz targets (templates, SMART, config, PVE, PBS) and save report to target/reports/fuzz.txt (override time with FUZZ_TIME=60s)
+    vars:
+      FUZZ_TIME: '{{default "30s" .FUZZ_TIME}}'
+    cmds:
+      - FUZZ_TIME={{.FUZZ_TIME}} go run ./scripts/fuzz
 
   deps:
     desc: Download and tidy dependencies
