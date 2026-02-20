@@ -13,6 +13,7 @@ import (
 
 	"github.com/a-h/templ"
 	"github.com/darshan-rambhia/glint/internal/cache"
+	"github.com/darshan-rambhia/glint/internal/model"
 	"github.com/darshan-rambhia/glint/internal/store"
 	"github.com/darshan-rambhia/glint/templates"
 	"github.com/darshan-rambhia/glint/templates/components"
@@ -98,6 +99,9 @@ func (s *Server) registerRoutes() {
 
 	// Health check
 	s.mux.HandleFunc("GET /healthz", s.handleHealthz)
+
+	// Dashboard widget summary
+	s.mux.HandleFunc("GET /api/widget", s.handleWidget)
 
 	// Swagger UI
 	s.mux.Handle("GET /swagger/", httpSwagger.Handler(
@@ -348,6 +352,133 @@ func (s *Server) handleGuestSparklineSVG(w http.ResponseWriter, r *http.Request)
 	}
 
 	renderHTML(w, r, components.SparklineSVG(points, "cpu 24h"))
+}
+
+// widgetResponse is the response body for GET /api/widget.
+type widgetResponse struct {
+	Nodes   widgetNodeStats   `json:"nodes"`
+	Guests  widgetGuestStats  `json:"guests"`
+	CPU     widgetCPUStats    `json:"cpu"`
+	Memory  widgetMemStats    `json:"memory"`
+	Disks   widgetDiskStats   `json:"disks"`
+	Backups widgetBackupStats `json:"backups"`
+}
+
+type widgetNodeStats struct {
+	Total   int `json:"total"`
+	Online  int `json:"online"`
+	Offline int `json:"offline"`
+}
+
+type widgetGuestStats struct {
+	Total   int `json:"total"`
+	Running int `json:"running"`
+	Stopped int `json:"stopped"`
+	VMs     int `json:"vms"`
+	LXC     int `json:"lxc"`
+}
+
+type widgetCPUStats struct {
+	UsagePct float64 `json:"usage_pct"`
+}
+
+type widgetMemStats struct {
+	UsedBytes  int64   `json:"used_bytes"`
+	TotalBytes int64   `json:"total_bytes"`
+	UsagePct   float64 `json:"usage_pct"`
+}
+
+type widgetDiskStats struct {
+	Total   int `json:"total"`
+	Passed  int `json:"passed"`
+	Failed  int `json:"failed"`
+	Warning int `json:"warning"`
+	Unknown int `json:"unknown"`
+}
+
+type widgetBackupStats struct {
+	Total          int   `json:"total"`
+	LastBackupTime int64 `json:"last_backup_time"`
+}
+
+// @Summary Dashboard widget data
+// @Description Returns cluster summary statistics for homepage-style dashboard widgets (Homepage, Glance, Dashy, etc.)
+// @Produce json
+// @Success 200 {object} widgetResponse
+// @Router /api/widget [get]
+func (s *Server) handleWidget(w http.ResponseWriter, r *http.Request) {
+	snap := s.cache.Snapshot()
+	var resp widgetResponse
+
+	// Nodes and cluster-level CPU / memory (online nodes only).
+	var cpuSum float64
+	var cpuCount int
+	for _, nodes := range snap.Nodes {
+		for _, n := range nodes {
+			resp.Nodes.Total++
+			if n.Status == "online" {
+				resp.Nodes.Online++
+				cpuSum += n.CPU * 100
+				cpuCount++
+				resp.Memory.UsedBytes += n.Memory.Used
+				resp.Memory.TotalBytes += n.Memory.Total
+			} else {
+				resp.Nodes.Offline++
+			}
+		}
+	}
+	if cpuCount > 0 {
+		resp.CPU.UsagePct = cpuSum / float64(cpuCount)
+	}
+	if resp.Memory.TotalBytes > 0 {
+		resp.Memory.UsagePct = float64(resp.Memory.UsedBytes) / float64(resp.Memory.TotalBytes) * 100
+	}
+
+	// Guests.
+	for _, guests := range snap.Guests {
+		for _, g := range guests {
+			resp.Guests.Total++
+			switch g.Status {
+			case "running":
+				resp.Guests.Running++
+			case "stopped":
+				resp.Guests.Stopped++
+			}
+			switch g.Type {
+			case "qemu":
+				resp.Guests.VMs++
+			case "lxc":
+				resp.Guests.LXC++
+			}
+		}
+	}
+
+	// Disks — categorise by SMART status bitfield.
+	for _, d := range snap.Disks {
+		resp.Disks.Total++
+		switch {
+		case d.Status == model.StatusPassed:
+			resp.Disks.Passed++
+		case d.Status&(model.StatusFailedSmart|model.StatusFailedScrutiny) != 0:
+			resp.Disks.Failed++
+		case d.Status&model.StatusWarnScrutiny != 0:
+			resp.Disks.Warning++
+		default:
+			resp.Disks.Unknown++
+		}
+	}
+
+	// Backups — total count and most recent timestamp.
+	for _, backups := range snap.Backups {
+		for _, b := range backups {
+			resp.Backups.Total++
+			if b.BackupTime > resp.Backups.LastBackupTime {
+				resp.Backups.LastBackupTime = b.BackupTime
+			}
+		}
+	}
+
+	writeJSON(w, r, resp)
 }
 
 // @Summary Health check

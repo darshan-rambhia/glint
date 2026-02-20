@@ -792,3 +792,88 @@ func TestHandleGuestSparklineSVG_StoreError(t *testing.T) {
 
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
 }
+
+// --- handleWidget ---
+
+func TestHandleWidget_Empty(t *testing.T) {
+	srv, _, _ := newTestServer(t)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/widget", nil)
+	w := httptest.NewRecorder()
+	srv.mux.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, "application/json", w.Header().Get("Content-Type"))
+
+	var resp widgetResponse
+	require.NoError(t, json.NewDecoder(w.Body).Decode(&resp))
+	assert.Equal(t, 0, resp.Nodes.Total)
+	assert.Equal(t, 0, resp.Guests.Total)
+	assert.Equal(t, 0.0, resp.CPU.UsagePct)
+	assert.Equal(t, 0, resp.Backups.Total)
+}
+
+func TestHandleWidget_WithData(t *testing.T) {
+	srv, c, _ := newTestServer(t)
+
+	// Two nodes: one online, one offline.
+	c.UpdateNodes("pve1", map[string]*model.Node{
+		"node1": {
+			Instance: "pve1", Name: "node1", Status: "online",
+			CPU:    0.40,
+			Memory: model.MemUsage{Used: 8 * 1024 * 1024 * 1024, Total: 32 * 1024 * 1024 * 1024},
+		},
+		"node2": {Instance: "pve1", Name: "node2", Status: "offline"},
+	})
+	// Three guests: two running VMs, one stopped LXC.
+	c.UpdateGuests("pve1", map[int]*model.Guest{
+		100: {Type: "qemu", Status: "running"},
+		101: {Type: "qemu", Status: "running"},
+		102: {Type: "lxc", Status: "stopped"},
+	})
+	// Four disks covering all status categories.
+	c.UpdateDisks(map[string]*model.Disk{
+		"wwn-pass":    {Status: model.StatusPassed},
+		"wwn-warn":    {Status: model.StatusWarnScrutiny},
+		"wwn-fail":    {Status: model.StatusFailedSmart},
+		"wwn-unknown": {Status: model.StatusUnknown},
+	})
+	// Two backups; the later one should be reflected in LastBackupTime.
+	size := int64(1024)
+	c.UpdateBackups("pbs1", map[string]*model.Backup{
+		"vm/100/2025-01-01": {BackupTime: 1000, SizeBytes: &size},
+		"vm/100/2025-06-01": {BackupTime: 2000, SizeBytes: &size},
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/api/widget", nil)
+	w := httptest.NewRecorder()
+	srv.mux.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var resp widgetResponse
+	require.NoError(t, json.NewDecoder(w.Body).Decode(&resp))
+
+	assert.Equal(t, 2, resp.Nodes.Total)
+	assert.Equal(t, 1, resp.Nodes.Online)
+	assert.Equal(t, 1, resp.Nodes.Offline)
+
+	assert.Equal(t, 40.0, resp.CPU.UsagePct)
+	assert.Greater(t, resp.Memory.TotalBytes, int64(0))
+	assert.Greater(t, resp.Memory.UsagePct, 0.0)
+
+	assert.Equal(t, 3, resp.Guests.Total)
+	assert.Equal(t, 2, resp.Guests.Running)
+	assert.Equal(t, 1, resp.Guests.Stopped)
+	assert.Equal(t, 2, resp.Guests.VMs)
+	assert.Equal(t, 1, resp.Guests.LXC)
+
+	assert.Equal(t, 4, resp.Disks.Total)
+	assert.Equal(t, 1, resp.Disks.Passed)
+	assert.Equal(t, 1, resp.Disks.Failed)
+	assert.Equal(t, 1, resp.Disks.Warning)
+	assert.Equal(t, 1, resp.Disks.Unknown)
+
+	assert.Equal(t, 2, resp.Backups.Total)
+	assert.Equal(t, int64(2000), resp.Backups.LastBackupTime)
+}
