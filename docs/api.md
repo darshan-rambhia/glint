@@ -25,6 +25,7 @@ SwaggerUIBundle({
 | Method | Path | Description |
 |--------|------|-------------|
 | `GET` | `/healthz` | Health check with collector status |
+| `GET` | `/api/widget` | Cluster summary for dashboard widgets |
 | `GET` | `/api/sparkline/node/{instance}/{node}` | Node metric sparkline data points |
 | `GET` | `/api/sparkline/guest/{instance}/{vmid}` | Guest CPU sparkline data points |
 

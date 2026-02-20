@@ -877,3 +877,111 @@ func TestHandleWidget_WithData(t *testing.T) {
 	assert.Equal(t, 2, resp.Backups.Total)
 	assert.Equal(t, int64(2000), resp.Backups.LastBackupTime)
 }
+
+func TestHandleWidget_CPUAveragedAcrossNodes(t *testing.T) {
+	// CPU must be averaged over online node count, not summed.
+	srv, c, _ := newTestServer(t)
+	c.UpdateNodes("pve1", map[string]*model.Node{
+		"node1": {Status: "online", CPU: 0.20},
+		"node2": {Status: "online", CPU: 0.60},
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/api/widget", nil)
+	w := httptest.NewRecorder()
+	srv.mux.ServeHTTP(w, req)
+
+	var resp widgetResponse
+	require.NoError(t, json.NewDecoder(w.Body).Decode(&resp))
+	assert.Equal(t, 40.0, resp.CPU.UsagePct) // (20+60)/2, not 80
+}
+
+func TestHandleWidget_OfflineNodeExcluded(t *testing.T) {
+	// An offline node must not contribute to CPU or memory aggregates.
+	srv, c, _ := newTestServer(t)
+	c.UpdateNodes("pve1", map[string]*model.Node{
+		"online": {
+			Status: "online",
+			CPU:    0.50,
+			Memory: model.MemUsage{Used: 4 * 1024 * 1024 * 1024, Total: 8 * 1024 * 1024 * 1024},
+		},
+		"offline": {
+			Status: "offline",
+			CPU:    0.90, // must not be included in the average
+			Memory: model.MemUsage{Used: 7 * 1024 * 1024 * 1024, Total: 8 * 1024 * 1024 * 1024},
+		},
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/api/widget", nil)
+	w := httptest.NewRecorder()
+	srv.mux.ServeHTTP(w, req)
+
+	var resp widgetResponse
+	require.NoError(t, json.NewDecoder(w.Body).Decode(&resp))
+	assert.Equal(t, 2, resp.Nodes.Total)
+	assert.Equal(t, 1, resp.Nodes.Online)
+	assert.Equal(t, 1, resp.Nodes.Offline)
+	assert.Equal(t, 50.0, resp.CPU.UsagePct)
+	assert.Equal(t, int64(8*1024*1024*1024), resp.Memory.TotalBytes) // only the online node
+}
+
+func TestHandleWidget_DiskFailedScrutinyBit(t *testing.T) {
+	// StatusFailedScrutiny (4) alone must count as Failed, not Warning.
+	srv, c, _ := newTestServer(t)
+	c.UpdateDisks(map[string]*model.Disk{
+		"wwn-scrutiny-fail": {Status: model.StatusFailedScrutiny},
+		"wwn-combined-fail": {Status: model.StatusFailedSmart | model.StatusWarnScrutiny},
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/api/widget", nil)
+	w := httptest.NewRecorder()
+	srv.mux.ServeHTTP(w, req)
+
+	var resp widgetResponse
+	require.NoError(t, json.NewDecoder(w.Body).Decode(&resp))
+	assert.Equal(t, 2, resp.Disks.Total)
+	assert.Equal(t, 2, resp.Disks.Failed)
+	assert.Equal(t, 0, resp.Disks.Warning)
+}
+
+func TestHandleWidget_BackupsAcrossInstances(t *testing.T) {
+	// Backups from multiple PBS instances must all be counted and the global
+	// maximum BackupTime used for LastBackupTime.
+	srv, c, _ := newTestServer(t)
+	size := int64(1024)
+	c.UpdateBackups("pbs1", map[string]*model.Backup{
+		"vm/100/a": {BackupTime: 1000, SizeBytes: &size},
+		"vm/100/b": {BackupTime: 3000, SizeBytes: &size},
+	})
+	c.UpdateBackups("pbs2", map[string]*model.Backup{
+		"vm/200/a": {BackupTime: 2000, SizeBytes: &size},
+		"vm/200/b": {BackupTime: 5000, SizeBytes: &size}, // global max
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/api/widget", nil)
+	w := httptest.NewRecorder()
+	srv.mux.ServeHTTP(w, req)
+
+	var resp widgetResponse
+	require.NoError(t, json.NewDecoder(w.Body).Decode(&resp))
+	assert.Equal(t, 4, resp.Backups.Total)
+	assert.Equal(t, int64(5000), resp.Backups.LastBackupTime)
+}
+
+func TestHandleWidget_GuestPausedStatus(t *testing.T) {
+	// A paused guest increments Total but neither Running nor Stopped.
+	srv, c, _ := newTestServer(t)
+	c.UpdateGuests("pve1", map[int]*model.Guest{
+		100: {Type: "qemu", Status: "running"},
+		101: {Type: "qemu", Status: "paused"},
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/api/widget", nil)
+	w := httptest.NewRecorder()
+	srv.mux.ServeHTTP(w, req)
+
+	var resp widgetResponse
+	require.NoError(t, json.NewDecoder(w.Body).Decode(&resp))
+	assert.Equal(t, 2, resp.Guests.Total)
+	assert.Equal(t, 1, resp.Guests.Running)
+	assert.Equal(t, 0, resp.Guests.Stopped)
+}
