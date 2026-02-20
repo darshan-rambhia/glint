@@ -14,13 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/setup-go@v6
-        with:
-          go-version: '1.26'
-      - name: Install templ
-        run: go install github.com/a-h/templ/cmd/templ@latest
-      - name: Generate templates
-        run: templ generate
+      - uses: ./.github/actions/go-setup
       - name: golangci-lint
         id: lint
         uses: golangci/golangci-lint-action@v7
@@ -41,13 +35,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/setup-go@v6
-        with:
-          go-version: '1.26'
-      - name: Install templ
-        run: go install github.com/a-h/templ/cmd/templ@latest
-      - name: Generate templates
-        run: templ generate
+      - uses: ./.github/actions/go-setup
       - name: Run tests with coverage
         id: test
         run: go run ./scripts/coverage
@@ -92,13 +80,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/setup-go@v6
-        with:
-          go-version: '1.26'
-      - name: Install templ
-        run: go install github.com/a-h/templ/cmd/templ@latest
-      - name: Generate templates
-        run: templ generate
+      - uses: ./.github/actions/go-setup
       - name: Run benchmarks (smoke — 1 iteration each)
         id: bench
         run: BENCH_TIME=1x go run ./scripts/bench
@@ -131,13 +113,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/setup-go@v6
-        with:
-          go-version: '1.26'
-      - name: Install templ
-        run: go install github.com/a-h/templ/cmd/templ@latest
-      - name: Generate templates
-        run: templ generate
+      - uses: ./.github/actions/go-setup
       - name: Fuzz (5s per target)
         id: fuzz
         run: FUZZ_TIME=5s go run ./scripts/fuzz
@@ -174,13 +150,7 @@ jobs:
     needs: [lint, test, bench, fuzz]
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/setup-go@v6
-        with:
-          go-version: '1.26'
-      - name: Install templ
-        run: go install github.com/a-h/templ/cmd/templ@latest
-      - name: Generate templates
-        run: templ generate
+      - uses: ./.github/actions/go-setup
       - name: Build
         id: build
         run: go build -ldflags="-s -w" -o bin/glint ./cmd/glint

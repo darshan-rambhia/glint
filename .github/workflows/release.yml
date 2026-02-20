@@ -16,13 +16,7 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-      - uses: actions/setup-go@v6
-        with:
-          go-version: '1.26'
-      - name: Install templ
-        run: go install github.com/a-h/templ/cmd/templ@latest
-      - name: Generate templates
-        run: templ generate
+      - uses: ./.github/actions/go-setup
       - name: Login to GHCR
         uses: docker/login-action@v3
         with:
