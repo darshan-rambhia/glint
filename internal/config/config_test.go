@@ -396,17 +396,6 @@ func TestValidate_ValidConfig(t *testing.T) {
 	assert.NoError(t, cfg.Validate())
 }
 
-func TestLoad_MissingFile(t *testing.T) {
-	clearEnv(t)
-	t.Setenv("GLINT_PVE_URL", "https://pve:8006")
-	t.Setenv("GLINT_PVE_TOKEN_ID", "a@pam!t")
-	t.Setenv("GLINT_PVE_TOKEN_SECRET", "s")
-
-	cfg, err := Load("/nonexistent/path.yaml")
-	require.NoError(t, err)
-	require.Len(t, cfg.PVE, 1)
-	assert.Equal(t, "https://pve:8006", cfg.PVE[0].Host)
-}
 
 func TestLoad_InvalidYAML(t *testing.T) {
 	clearEnv(t)

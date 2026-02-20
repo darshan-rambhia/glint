@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"log/slog"
+	"net"
 	"os"
 	"os/signal"
 	"runtime"
@@ -20,6 +21,7 @@ import (
 	"github.com/darshan-rambhia/glint/internal/config"
 	"github.com/darshan-rambhia/glint/internal/notify"
 	"github.com/darshan-rambhia/glint/internal/store"
+	"github.com/darshan-rambhia/glint/templates"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -75,6 +77,7 @@ func main() {
 	flag.Parse()
 
 	ver, sha, built, dirty := buildInfo()
+	templates.CSSVersion = sha
 
 	if *showVersion {
 		fmt.Printf("glint %s\n  commit:    %s (%s)\n  built:     %s\n  go:        %s\n  platform:  %s/%s\n",
@@ -138,11 +141,14 @@ func main() {
 	// Initialize worker pool
 	pool := collector.NewWorkerPool(cfg.WorkerPoolSize)
 
-	// Setup context with signal handling
-	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer cancel()
+	// Setup context with signal handling.
+	// Keep sigCtx separate so we can call stop() after the first signal fires,
+	// which re-enables default signal behaviour — a second Ctrl-C / SIGTERM
+	// will then kill the process immediately if the graceful shutdown hangs.
+	sigCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
 
-	g, ctx := errgroup.WithContext(ctx)
+	g, ctx := errgroup.WithContext(sigCtx)
 
 	// Start PVE collectors
 	for _, pveCfg := range cfg.PVE {
@@ -259,12 +265,17 @@ func main() {
 		}
 	}
 
+	// Sync the backup-stale threshold to the UI so the dashboard chip matches
+	// the alerter: the chip shows "Stale" exactly when an alert would fire.
+	templates.BackupStaleHours = alertCfg.BackupStale.MaxAge.Hours()
+
 	a := alerter.NewAlerter(c, st, providers, alertCfg)
 	g.Go(func() error { return a.Run(ctx) })
 
 	// Start HTTP server
 	server := api.NewServer(cfg.Listen, c, st)
 	g.Go(func() error { return server.Run(ctx) })
+	printListenURLs(cfg.Listen)
 
 	slog.Info("all components started",
 		"pve_instances", len(cfg.PVE),
@@ -272,9 +283,63 @@ func main() {
 		"notifications", len(providers),
 	)
 
+	// Block until a shutdown signal arrives, then log it and unregister the
+	// signal handler so a second signal uses the OS default (immediate kill).
+	<-sigCtx.Done()
+	slog.Info("shutdown signal received, stopping...")
+	stop()
+
 	if err := g.Wait(); err != nil && !errors.Is(err, context.Canceled) {
 		slog.Error("fatal error", "error", err)
 	}
 
 	slog.Info("glint stopped gracefully")
+}
+
+// printListenURLs prints the local and network URLs glint is reachable on.
+func printListenURLs(listenAddr string) {
+	host, port, err := net.SplitHostPort(listenAddr)
+	if err != nil {
+		return
+	}
+
+	fmt.Printf("\n  ➜  Local:   http://localhost:%s/\n", port)
+
+	// Only enumerate network interfaces when bound to all addresses.
+	if host != "" && host != "0.0.0.0" && host != "::" {
+		if host != "localhost" && host != "127.0.0.1" && host != "::1" {
+			fmt.Printf("  ➜  Network: http://%s:%s/\n", host, port)
+		}
+		fmt.Println()
+		return
+	}
+
+	ifaces, err := net.Interfaces()
+	if err != nil {
+		fmt.Println()
+		return
+	}
+	for _, iface := range ifaces {
+		if iface.Flags&net.FlagUp == 0 || iface.Flags&net.FlagLoopback != 0 {
+			continue
+		}
+		addrs, err := iface.Addrs()
+		if err != nil {
+			continue
+		}
+		for _, addr := range addrs {
+			var ip net.IP
+			switch v := addr.(type) {
+			case *net.IPNet:
+				ip = v.IP
+			case *net.IPAddr:
+				ip = v.IP
+			}
+			if ip == nil || ip.IsLoopback() || ip.To4() == nil {
+				continue
+			}
+			fmt.Printf("  ➜  Network: http://%s:%s/\n", ip, port)
+		}
+	}
+	fmt.Println()
 }

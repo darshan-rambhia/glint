@@ -3,19 +3,37 @@ package templates
 import "github.com/darshan-rambhia/glint/internal/cache"
 
 templ Dashboard(snap cache.CacheSnapshot) {
-	@Layout("Glint - Infrastructure Monitor") {
+	@Layout("Glint — Infrastructure Monitor") {
 		<header class="header">
 			<div class="header-left">
-				<h1 class="logo">GLINT</h1>
-				<span class="tagline">Infrastructure Monitor</span>
+				<a href="/" class="logo">gl<span class="logo-dot">·</span>nt</a>
+				<nav class="nav">
+					<a class="nav-item" href="#nodes-section">Nodes</a>
+					<a class="nav-item" href="#disks-section">Disk health</a>
+					<a class="nav-item" href="#guests-section">Guests</a>
+					<a class="nav-item" href="#backups-section">Backups</a>
+					<a class="nav-item" href="#events-section">Events</a>
+				</nav>
+				<span class="header-badge">{ HeaderSummary(snap) }</span>
 			</div>
 			<div class="header-right">
-				<span class="last-updated">Last updated: { OldestPoll(snap.LastPoll) }</span>
+				<div class="theme-switcher" id="theme-switcher">
+					<button class="theme-btn" data-theme-set="light" title="Light mode">☀</button>
+					<button class="theme-btn" data-theme-set="dark" title="Dark mode">☾</button>
+					<button class="theme-btn" data-theme-set="auto" title="Follow system">⊙</button>
+				</div>
+				<span class="last-updated">
+					<span class="pulse"></span>
+					{ OldestPoll(snap.LastPoll) }
+				</span>
 			</div>
 		</header>
 		<main class="dashboard">
 			<div id="nodes-section" hx-get="/fragments/nodes" hx-trigger="every 15s" hx-swap="innerHTML">
 				@NodesFragment(snap)
+			</div>
+			<div id="disks-section" hx-get="/fragments/disks" hx-trigger="every 300s" hx-swap="innerHTML">
+				@DisksFragment(snap)
 			</div>
 			<div id="guests-section" hx-get="/fragments/guests" hx-trigger="every 15s" hx-swap="innerHTML">
 				@GuestsFragment(snap)
@@ -23,8 +41,8 @@ templ Dashboard(snap cache.CacheSnapshot) {
 			<div id="backups-section" hx-get="/fragments/backups" hx-trigger="every 60s" hx-swap="innerHTML">
 				@BackupsFragment(snap)
 			</div>
-			<div id="disks-section" hx-get="/fragments/disks" hx-trigger="every 300s" hx-swap="innerHTML">
-				@DisksFragment(snap)
+			<div id="events-section" hx-get="/fragments/events" hx-trigger="every 60s" hx-swap="innerHTML">
+				@EventsFragment(snap)
 			</div>
 		</main>
 	}

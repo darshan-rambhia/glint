@@ -7,49 +7,58 @@ import (
 )
 
 templ DisksFragment(snap cache.CacheSnapshot) {
-	<section class="panel">
-		<h2 class="panel-title">DISK HEALTH (S.M.A.R.T.)</h2>
+	<section class="section">
+		<div class="section-header">
+			<h2 class="section-title">Disk health</h2>
+			<span class="section-meta">{ fmt.Sprintf("%d drives", len(snap.Disks)) }</span>
+		</div>
 		if len(snap.Disks) == 0 {
 			<div class="empty-state">No disks detected yet. SMART data is polled hourly.</div>
 		} else {
-			<table class="data-table">
-				<thead>
-					<tr>
-						<th>Device</th>
-						<th>Model</th>
-						<th>Health</th>
-						<th>Temp</th>
-						<th>Hours</th>
-						<th>Wear</th>
-						<th></th>
-					</tr>
-				</thead>
-				<tbody>
-					for _, disk := range SortedDiskList(snap.Disks) {
-						@DiskRow(disk)
-					}
-				</tbody>
-			</table>
+			<div class="table-scroll">
+				<table class="data-table">
+					<thead>
+						<tr>
+							<th>Device</th>
+							<th>Type</th>
+							<th>Model</th>
+							<th>Size</th>
+							<th>Health</th>
+							<th>Temp</th>
+							<th>Hours</th>
+							<th>Wear</th>
+							<th></th>
+						</tr>
+					</thead>
+					<tbody>
+						for _, disk := range SortedDiskList(snap.Disks) {
+							@DiskRow(disk)
+						}
+					</tbody>
+				</table>
+			</div>
 		}
 	</section>
 }
 
 templ DiskRow(disk *model.Disk) {
-	<tr class={ DiskStatusClass(disk.Status) }>
-		<td class="mono">{ disk.DevPath }</td>
+	<tr>
+		<td class="td-name">{ disk.DevPath }</td>
+		<td class="td-dim">{ disk.DiskType }</td>
 		<td>{ disk.Model }</td>
+		<td>{ FormatBytes(disk.SizeBytes) }</td>
 		<td>
-			<span class={ "status-badge", DiskStatusClass(disk.Status) }>
+			<span class={ "chip", DiskStatusClass(disk.Status) }>
 				{ disk.Health }
 			</span>
 		</td>
-		<td class="mono">{ TempDisplay(disk.Temperature) }</td>
-		<td class="mono">{ HoursDisplay(disk.PowerOnHours) }</td>
-		<td class="mono">{ WearoutDisplay(disk.Wearout) }</td>
+		<td>{ TempDisplay(disk.Temperature) }</td>
+		<td>{ HoursDisplay(disk.PowerOnHours) }</td>
+		<td>{ WearoutDisplay(disk.Wearout) }</td>
 		<td>
 			if len(disk.Attributes) > 0 {
 				<button
-					class="btn-expand"
+					class="btn-details"
 					hx-get={ fmt.Sprintf("/fragments/disk/%s", disk.WWN) }
 					hx-target={ fmt.Sprintf("#disk-detail-%s", disk.WWN) }
 					hx-swap="innerHTML"
@@ -64,17 +73,17 @@ templ DiskRow(disk *model.Disk) {
 }
 
 templ DiskDetail(disk *model.Disk) {
-	<td colspan="7">
+	<td colspan="9">
 		<div class="disk-detail">
 			<div class="disk-info">
-				<span>[{ disk.Instance }/{ disk.Node }]</span>
+				<span>{ disk.Instance } / { disk.Node }</span>
 				<span>Serial: { disk.Serial }</span>
 				<span>WWN: { disk.WWN }</span>
 				<span>Size: { FormatBytes(disk.SizeBytes) }</span>
 				<span>Protocol: { disk.Protocol }</span>
 			</div>
 			if len(disk.Attributes) > 0 {
-				<table class="data-table compact attr-table">
+				<table class="data-table compact">
 					<thead>
 						<tr>
 							<th>ID</th>
@@ -93,26 +102,26 @@ templ DiskDetail(disk *model.Disk) {
 					</tbody>
 				</table>
 			} else {
-				<p class="text-muted">No SMART attributes available for this disk.</p>
+				<p class="text-dim">No SMART attributes available for this disk.</p>
 			}
 		</div>
 	</td>
 }
 
 templ AttributeRow(attr model.SMARTAttribute) {
-	<tr class={ DiskStatusClass(attr.Status) }>
-		<td class="mono">{ fmt.Sprintf("%d", attr.ID) }</td>
+	<tr>
+		<td class="td-dim">{ fmt.Sprintf("%d", attr.ID) }</td>
 		<td>{ attr.Name }</td>
-		<td class="mono">{ fmt.Sprintf("%d", attr.Value) }</td>
-		<td class="mono">{ fmt.Sprintf("%d", attr.Worst) }</td>
-		<td class="mono">
+		<td>{ fmt.Sprintf("%d", attr.Value) }</td>
+		<td>{ fmt.Sprintf("%d", attr.Worst) }</td>
+		<td>
 			if attr.Threshold >= 0 {
 				{ fmt.Sprintf("%d", attr.Threshold) }
 			} else {
-				--
+				<span class="td-dim">—</span>
 			}
 		</td>
-		<td class="mono">{ attr.RawString }</td>
+		<td>{ attr.RawString }</td>
 		<td>
 			if attr.FailureRate != nil {
 				<span class={ "risk-badge", riskClass(attr) }>

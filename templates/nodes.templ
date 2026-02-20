@@ -7,80 +7,108 @@ import (
 )
 
 templ NodesFragment(snap cache.CacheSnapshot) {
-	<section class="panel">
-		<h2 class="panel-title">NODES</h2>
+	<section class="section">
+		<div class="section-header">
+			<h2 class="section-title">Nodes</h2>
+			<span class="section-meta">
+				{ func() string {
+					n := NodeCount(snap.Nodes)
+					if n == 1 { return "1 node" }
+					return fmt.Sprintf("%d nodes", n)
+				}() }
+			</span>
+		</div>
 		if len(snap.Nodes) == 0 {
 			<div class="empty-state">No nodes connected. Check your PVE configuration.</div>
-		}
-		for instance, nodes := range snap.Nodes {
-			for _, node := range nodes {
-				@NodeCard(instance, node)
-			}
+		} else {
+			<div class="nodes-list">
+				for _, entry := range SortedNodeList(snap.Nodes) {
+					@NodeRow(entry.Instance, entry.Node)
+				}
+			</div>
 		}
 	</section>
 }
 
-templ NodeCard(instance string, node *model.Node) {
-	<div class={ "node-card", templ.KV("node-offline", node.Status != "online") }>
-		<div class="node-header">
-			<span class="node-instance">[{ instance }]</span>
-			<span class="node-name">{ node.Name }</span>
-			<span class={ "node-status", templ.KV("status-ok", node.Status == "online"), templ.KV("status-critical", node.Status != "online") }>
-				if node.Status == "online" {
-					ONLINE
-				} else {
-					OFFLINE
-				}
-			</span>
+templ NodeRow(instance string, node *model.Node) {
+	<div class={ "node-row", templ.KV("node-offline", node.Status != "online") }>
+		<div class="nr-ident">
+			<div class="nc-name">{ node.Name }</div>
+			<div class="nc-host">{ instance }</div>
 		</div>
 		if node.Status == "online" {
-			<div class="node-metrics">
-				<div class="metric-row">
-					<span class="metric-label">CPU</span>
+			<span class="chip chip-ok">Online</span>
+		} else {
+			<span class="chip chip-crit">Offline</span>
+		}
+		if node.Status == "online" {
+			<div class="nr-bars">
+				<div class="nr-stat">
+					<div class="nr-stat-top">
+						<span class="stat-key">CPU</span>
+						<span class="stat-val">{ FormatPct(node.CPU * 100) }</span>
+					</div>
 					@ProgressBar(node.CPU * 100)
-					<span class="metric-value">{ FormatPct(node.CPU * 100) }</span>
-					<span class="metric-extra">Load: { fmt.Sprintf("%.1f / %.1f / %.1f", node.LoadAvg[0], node.LoadAvg[1], node.LoadAvg[2]) }</span>
+					<div class="stat-extra">load { fmt.Sprintf("%.1f / %.1f / %.1f", node.LoadAvg[0], node.LoadAvg[1], node.LoadAvg[2]) }</div>
 				</div>
-				<div class="metric-row">
-					<span class="metric-label">RAM</span>
+				<div class="nr-stat">
+					<div class="nr-stat-top">
+						<span class="stat-key">RAM</span>
+						<span class="stat-val">{ FormatPct(MemPct(node.Memory.Used, node.Memory.Total)) }</span>
+					</div>
 					@ProgressBar(MemPct(node.Memory.Used, node.Memory.Total))
-					<span class="metric-value">{ FormatPct(MemPct(node.Memory.Used, node.Memory.Total)) }</span>
-					<span class="metric-extra">{ FormatBytes(node.Memory.Used) } / { FormatBytes(node.Memory.Total) }</span>
-					<span class="metric-extra">IO: { fmt.Sprintf("%.1f%%", node.IOWait) }</span>
+					<div class="stat-extra">{ FormatBytes(node.Memory.Used) } / { FormatBytes(node.Memory.Total) }</div>
 				</div>
-				<div class="metric-row">
-					<span class="metric-label">Swap</span>
+				<div class="nr-stat">
+					<div class="nr-stat-top">
+						<span class="stat-key">Swap</span>
+						<span class="stat-val">{ FormatPct(MemPct(node.Swap.Used, node.Swap.Total)) }</span>
+					</div>
 					@ProgressBar(MemPct(node.Swap.Used, node.Swap.Total))
-					<span class="metric-value">{ FormatPct(MemPct(node.Swap.Used, node.Swap.Total)) }</span>
-					<span class="metric-label secondary">Root</span>
-					@ProgressBar(MemPct(node.RootFS.Used, node.RootFS.Total))
-					<span class="metric-value">{ FormatPct(MemPct(node.RootFS.Used, node.RootFS.Total)) }</span>
 				</div>
-				<div class="node-footer">
-					<span>Uptime: { FormatUptime(node.Uptime) }</span>
-					<span>CPU: { NodeTempDisplay(node.Temperature) }</span>
+				<div class="nr-stat">
+					<div class="nr-stat-top">
+						<span class="stat-key">Root</span>
+						<span class="stat-val">{ FormatPct(MemPct(node.RootFS.Used, node.RootFS.Total)) }</span>
+					</div>
+					@ProgressBar(MemPct(node.RootFS.Used, node.RootFS.Total))
+					<div class="stat-extra">{ FormatBytes(node.RootFS.Used) } / { FormatBytes(node.RootFS.Total) }</div>
 				</div>
 			</div>
-			<div class="sparkline-row">
+			<div class="nr-sparklines">
 				<div
-					class="sparkline-container"
+					class="nr-sparkline"
 					hx-get={ fmt.Sprintf("/fragments/sparkline/node/%s/%s?hours=24&metric=cpu", instance, node.Name) }
 					hx-trigger="load"
 					hx-swap="innerHTML"
 				></div>
 				<div
-					class="sparkline-container"
+					class="nr-sparkline"
 					hx-get={ fmt.Sprintf("/fragments/sparkline/node/%s/%s?hours=24&metric=memory", instance, node.Name) }
 					hx-trigger="load"
 					hx-swap="innerHTML"
 				></div>
+			</div>
+			<div class="nr-meta">
+				<div class="nr-meta-item">
+					<span class="nc-foot-key">Uptime</span>
+					<span class="nc-foot-val">{ FormatUptime(node.Uptime) }</span>
+				</div>
+				<div class="nr-meta-item">
+					<span class="nc-foot-key">Temp</span>
+					<span class="nc-foot-val">{ NodeTempDisplay(node.Temperature) }</span>
+				</div>
+				<div class="nr-meta-item">
+					<span class="nc-foot-key">IO wait</span>
+					<span class="nc-foot-val">{ fmt.Sprintf("%.1f%%", node.IOWait) }</span>
+				</div>
 			</div>
 		}
 	</div>
 }
 
 templ ProgressBar(pct float64) {
-	<div class={ "progress-bar", ProgressBarClass(pct) }>
-		<div class="progress-fill" style={ fmt.Sprintf("width: %.0f%%", ProgressBarWidth(pct)) }></div>
+	<div class="bar">
+		<div class={ "bar-fill", ProgressBarClass(pct) } style={ fmt.Sprintf("width:%.0f%%", ProgressBarWidth(pct)) }></div>
 	</div>
 }

@@ -7,66 +7,103 @@ import (
 )
 
 templ GuestsFragment(snap cache.CacheSnapshot) {
-	<section class="panel">
-		<div class="panel-header">
-			<h2 class="panel-title">GUESTS</h2>
-			<span class="panel-subtitle">
+	<section class="section">
+		<div class="section-header">
+			<h2 class="section-title">Guests</h2>
+			<span class="section-meta">
 				{ func() string {
 					r, s := CountGuestsByStatus(snap.Guests)
 					if s > 0 {
-						return fmt.Sprintf("(%d running, %d stopped)", r, s)
+						return fmt.Sprintf("%d running · %d stopped", r, s)
 					}
-					return fmt.Sprintf("(%d running)", r)
+					return fmt.Sprintf("%d running", r)
 				}() }
 			</span>
 		</div>
 		if len(snap.Guests) == 0 {
 			<div class="empty-state">No guests found.</div>
 		} else {
-			<table class="data-table">
-				<thead>
-					<tr>
-						<th>ID</th>
-						<th>Name</th>
-						<th>Type</th>
-						<th>Status</th>
-						<th>CPU</th>
-						<th>Memory</th>
-						<th>Disk</th>
-					</tr>
-				</thead>
-				<tbody>
-					for _, guest := range SortedGuestList(snap.Guests) {
-						@GuestRow(guest)
-					}
-				</tbody>
-			</table>
+			<div class="table-scroll">
+				<table class="data-table">
+					<thead>
+						<tr>
+							<th>ID</th>
+							<th>Name</th>
+							<th>Type</th>
+							<th>Status</th>
+							<th>CPU</th>
+							<th>Memory</th>
+							<th>Disk</th>
+							if len(snap.Backups) > 0 {
+								<th>Last backup</th>
+							}
+						</tr>
+					</thead>
+					<tbody>
+						for _, guest := range SortedGuestList(snap.Guests) {
+							@GuestRow(guest, snap.Backups)
+						}
+					</tbody>
+				</table>
+			</div>
 		}
 	</section>
 }
 
-templ GuestRow(guest *model.Guest) {
+templ GuestRow(guest *model.Guest, backups map[string]map[string]*model.Backup) {
 	<tr class={ templ.KV("row-stopped", guest.Status != "running") }>
-		<td class="mono">{ fmt.Sprintf("%d", guest.VMID) }</td>
-		<td>{ guest.Name }</td>
-		<td class="mono uppercase">{ guest.Type }</td>
+		<td class="td-dim">{ fmt.Sprintf("%d", guest.VMID) }</td>
+		<td class="td-name">{ guest.Name }</td>
 		<td>
-			<span class={ "status-badge", GuestStatusClass(guest.Status) }>
+			if guest.Type == "qemu" {
+				<span class="tpill tpill-vm">vm</span>
+			} else {
+				<span class="tpill tpill-ct">ct</span>
+			}
+		</td>
+		<td>
+			<span class={ "chip", GuestStatusClass(guest.Status) }>
 				if guest.Status == "running" {
-					UP
+					Running
 				} else {
 					{ guest.Status }
 				}
 			</span>
 		</td>
-		<td class="mono">
+		<td>
 			if guest.CPUs > 0 {
-				{ FormatPct(guest.CPU / float64(guest.CPUs) * 100) }
+				<div class="mini-bar">
+					<div class="bar">
+						<div class={ "bar-fill", ProgressBarClass(guest.CPU / float64(guest.CPUs) * 100) } style={ fmt.Sprintf("width:%.0f%%", ProgressBarWidth(guest.CPU / float64(guest.CPUs) * 100)) }></div>
+					</div>
+					{ FormatPct(guest.CPU / float64(guest.CPUs) * 100) }
+				</div>
 			} else {
-				0%
+				<span class="td-dim">0%</span>
 			}
 		</td>
-		<td class="mono">{ FormatBytes(guest.Mem) }/{ FormatBytes(guest.MaxMem) }</td>
-		<td class="mono">{ FormatBytes(guest.Disk) }</td>
+		<td>
+			<div class="mini-bar">
+				<div class="bar">
+					<div class={ "bar-fill", ProgressBarClass(MemPct(guest.Mem, guest.MaxMem)) } style={ fmt.Sprintf("width:%.0f%%", ProgressBarWidth(MemPct(guest.Mem, guest.MaxMem))) }></div>
+				</div>
+				{ FormatBytes(guest.Mem) }
+			</div>
+		</td>
+		<td>{ FormatBytes(guest.Disk) }</td>
+		if len(backups) > 0 {
+			<td>@GuestBackupCell(BackupsForGuest(backups, guest.VMID))</td>
+		}
 	</tr>
+}
+
+templ GuestBackupCell(guestBackups []*model.Backup) {
+	if len(guestBackups) == 0 {
+		<span class="td-dim">—</span>
+	} else {
+		<span class="mono text-sub">{ FormatAge(guestBackups[0].BackupTime) }</span>
+		for _, b := range guestBackups {
+			<span class={ "chip", BackupStatusClass(b.BackupTime, 36) }>{ b.Datastore }</span>
+		}
+	}
 }

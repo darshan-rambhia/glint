@@ -8,8 +8,18 @@ import (
 	"strings"
 	"time"
 
+	"github.com/darshan-rambhia/glint/internal/cache"
 	"github.com/darshan-rambhia/glint/internal/model"
 )
+
+// CSSVersion is appended as a query parameter to static asset URLs so browsers
+// pick up new CSS after a redeploy. Set this at startup (e.g. to the git commit).
+var CSSVersion = "dev"
+
+// BackupStaleHours is the age threshold (in hours) above which a backup is
+// considered stale in the UI. Set this at startup from the alert config so the
+// dashboard chip matches the alerter threshold.
+var BackupStaleHours float64 = 36
 
 // FormatBytes formats bytes into human-readable form.
 func FormatBytes(b int64) string {
@@ -78,32 +88,32 @@ func MemPct(used, total int64) float64 {
 	return float64(used) / float64(total) * 100
 }
 
-// DiskStatusClass returns a CSS class based on disk status.
+// DiskStatusClass returns a CSS chip class based on disk status.
 func DiskStatusClass(status int) string {
 	if status&model.StatusFailedSmart != 0 || status&model.StatusFailedScrutiny != 0 {
-		return "status-critical"
+		return "chip-crit"
 	}
 	if status&model.StatusWarnScrutiny != 0 {
-		return "status-warning"
+		return "chip-warn"
 	}
 	if status&model.StatusUnknown != 0 {
-		return "status-unknown"
+		return "chip-unk"
 	}
 	if status&model.StatusInternalError != 0 {
-		return "status-error"
+		return "chip-warn"
 	}
-	return "status-ok"
+	return "chip-ok"
 }
 
-// GuestStatusClass returns a CSS class for guest status.
+// GuestStatusClass returns a CSS chip class for guest status.
 func GuestStatusClass(status string) string {
 	switch status {
 	case "running":
-		return "status-ok"
+		return "chip-ok"
 	case "stopped":
-		return "status-critical"
+		return "chip-crit"
 	default:
-		return "status-warning"
+		return "chip-warn"
 	}
 }
 
@@ -111,18 +121,18 @@ func GuestStatusClass(status string) string {
 func BackupStatusLabel(backupTime int64, staleHours float64) string {
 	age := time.Since(time.Unix(backupTime, 0))
 	if age.Hours() > staleHours {
-		return "STALE"
+		return "Stale"
 	}
-	return "OK"
+	return "Ok"
 }
 
-// BackupStatusClass returns CSS class for backup status.
+// BackupStatusClass returns CSS chip class for backup status.
 func BackupStatusClass(backupTime int64, staleHours float64) string {
 	age := time.Since(time.Unix(backupTime, 0))
 	if age.Hours() > staleHours {
-		return "status-warning"
+		return "chip-warn"
 	}
-	return "status-ok"
+	return "chip-ok"
 }
 
 // ProgressBarWidth returns a width percentage capped at 100.
@@ -139,10 +149,10 @@ func ProgressBarWidth(pct float64) float64 {
 // ProgressBarClass returns CSS class based on usage percentage.
 func ProgressBarClass(pct float64) string {
 	if pct >= 90 {
-		return "bar-critical"
+		return "bar-crit"
 	}
 	if pct >= 75 {
-		return "bar-warning"
+		return "bar-warn"
 	}
 	return "bar-ok"
 }
@@ -159,6 +169,64 @@ func CountGuestsByStatus(guests map[string]map[int]*model.Guest) (running, stopp
 		}
 	}
 	return
+}
+
+// InstanceNode pairs a PVE instance name with a Node for sorted iteration.
+type InstanceNode struct {
+	Instance string
+	Node     *model.Node
+}
+
+// InstanceDatastore pairs a PBS instance name with a DatastoreStatus for sorted iteration.
+type InstanceDatastore struct {
+	Instance  string
+	Datastore *model.DatastoreStatus
+}
+
+// SortedNodeList returns all nodes as a flat slice sorted by instance+name.
+func SortedNodeList(nodes map[string]map[string]*model.Node) []InstanceNode {
+	var list []InstanceNode
+	for instance, instanceNodes := range nodes {
+		for _, n := range instanceNodes {
+			list = append(list, InstanceNode{Instance: instance, Node: n})
+		}
+	}
+	sort.Slice(list, func(i, j int) bool {
+		return list[i].Instance+"/"+list[i].Node.Name < list[j].Instance+"/"+list[j].Node.Name
+	})
+	return list
+}
+
+// SortedDatastoreList returns all datastores as a flat slice sorted by instance+name.
+func SortedDatastoreList(datastores map[string]map[string]*model.DatastoreStatus) []InstanceDatastore {
+	var list []InstanceDatastore
+	for instance, instanceDatastores := range datastores {
+		for _, ds := range instanceDatastores {
+			list = append(list, InstanceDatastore{Instance: instance, Datastore: ds})
+		}
+	}
+	sort.Slice(list, func(i, j int) bool {
+		return list[i].Instance+"/"+list[i].Datastore.Name < list[j].Instance+"/"+list[j].Datastore.Name
+	})
+	return list
+}
+
+// NodeCount returns the total number of nodes across all PVE instances.
+func NodeCount(nodes map[string]map[string]*model.Node) int {
+	total := 0
+	for _, ns := range nodes {
+		total += len(ns)
+	}
+	return total
+}
+
+// DatastoreCount returns the total number of datastores across all PBS instances.
+func DatastoreCount(datastores map[string]map[string]*model.DatastoreStatus) int {
+	total := 0
+	for _, ds := range datastores {
+		total += len(ds)
+	}
+	return total
 }
 
 // SortedGuestList returns all guests as a flat sorted slice.
@@ -191,8 +259,47 @@ func AllBackupsSorted(backups map[string]map[string]*model.Backup) []*model.Back
 			list = append(list, b)
 		}
 	}
-	sort.Slice(list, func(i, j int) bool { return list[i].BackupTime > list[j].BackupTime })
+	sort.Slice(list, func(i, j int) bool {
+		if list[i].BackupTime != list[j].BackupTime {
+			return list[i].BackupTime > list[j].BackupTime
+		}
+		if list[i].BackupID != list[j].BackupID {
+			return list[i].BackupID < list[j].BackupID
+		}
+		return list[i].Datastore < list[j].Datastore
+	})
 	return list
+}
+
+// BackupsForGuest returns all backups for a given VMID across all PBS instances
+// and datastores, sorted by backup time descending (most recent first).
+//
+// PBS backup-id values vary depending on setup:
+//   - PVE-initiated backups use the plain VMID: "101"
+//   - Client-initiated (proxmox-backup-client) backups often use a prefixed form
+//     such as "lxc-101" or "qemu-101"
+//
+// We match on both: exact equality OR the VMID appearing as the numeric suffix
+// after a "-" separator.
+func BackupsForGuest(backups map[string]map[string]*model.Backup, vmid int) []*model.Backup {
+	vmidStr := fmt.Sprintf("%d", vmid)
+	var result []*model.Backup
+	for _, instanceBackups := range backups {
+		for _, b := range instanceBackups {
+			if backupIDMatchesVMID(b.BackupID, vmidStr) {
+				result = append(result, b)
+			}
+		}
+	}
+	sort.Slice(result, func(i, j int) bool { return result[i].BackupTime > result[j].BackupTime })
+	return result
+}
+
+// backupIDMatchesVMID returns true when a PBS backup-id corresponds to the given
+// VMID string. It handles both the plain form ("101") and the type-prefixed form
+// ("lxc-101", "qemu-101") by checking for an exact match or a "-{vmid}" suffix.
+func backupIDMatchesVMID(backupID, vmidStr string) bool {
+	return backupID == vmidStr || strings.HasSuffix(backupID, "-"+vmidStr)
 }
 
 // AllTasksSorted returns all PBS tasks sorted by start time descending.
@@ -214,15 +321,25 @@ func TaskDuration(t *model.PBSTask) string {
 	return FormatDuration(d)
 }
 
-// TaskStatusClass returns CSS class for a PBS task status.
+// TaskStatusClass returns CSS chip class for a PBS task status.
 func TaskStatusClass(status string) string {
 	if status == "OK" || status == "" {
-		return "status-ok"
+		return "chip-ok"
 	}
 	if len(status) >= 5 && status[:5] == "Error" {
-		return "status-critical"
+		return "chip-crit"
 	}
-	return "status-warning"
+	return "chip-warn"
+}
+
+// HeaderSummary returns a compact summary string for the dashboard header badge.
+func HeaderSummary(snap cache.CacheSnapshot) string {
+	nodeCount := 0
+	for _, nodes := range snap.Nodes {
+		nodeCount += len(nodes)
+	}
+	running, _ := CountGuestsByStatus(snap.Guests)
+	return fmt.Sprintf("%d nodes · %d running", nodeCount, running)
 }
 
 // OldestPoll returns the time since the oldest poll.

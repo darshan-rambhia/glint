@@ -82,6 +82,7 @@ func (s *Server) registerRoutes() {
 	s.mux.HandleFunc("GET /fragments/nodes", s.handleNodesFragment)
 	s.mux.HandleFunc("GET /fragments/guests", s.handleGuestsFragment)
 	s.mux.HandleFunc("GET /fragments/backups", s.handleBackupsFragment)
+	s.mux.HandleFunc("GET /fragments/events", s.handleEventsFragment)
 	s.mux.HandleFunc("GET /fragments/disks", s.handleDisksFragment)
 	s.mux.HandleFunc("GET /fragments/disk/{wwn}", s.handleDiskDetailFragment)
 
@@ -160,6 +161,20 @@ func (s *Server) handleBackupsFragment(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if err := component.Render(r.Context(), w); err != nil {
 		slog.Error("rendering backups fragment", "error", err)
+	}
+}
+
+// @Summary Events fragment
+// @Description Returns HTML fragment of PBS server-side task events for htmx
+// @Produce html
+// @Success 200 {string} string "HTML fragment"
+// @Router /fragments/events [get]
+func (s *Server) handleEventsFragment(w http.ResponseWriter, r *http.Request) {
+	snap := s.cache.Snapshot()
+	component := templates.EventsFragment(snap)
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	if err := component.Render(r.Context(), w); err != nil {
+		slog.Error("rendering events fragment", "error", err)
 	}
 }
 
@@ -371,3 +386,4 @@ func (s *Server) handleHealthz(w http.ResponseWriter, r *http.Request) {
 		slog.Error("encoding healthz response", "error", err)
 	}
 }
+

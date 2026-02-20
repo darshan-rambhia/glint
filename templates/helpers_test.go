@@ -81,32 +81,32 @@ func TestMemPct(t *testing.T) {
 }
 
 func TestDiskStatusClass(t *testing.T) {
-	assert.Equal(t, "status-ok", DiskStatusClass(model.StatusPassed))
-	assert.Equal(t, "status-critical", DiskStatusClass(model.StatusFailedSmart))
-	assert.Equal(t, "status-critical", DiskStatusClass(model.StatusFailedScrutiny))
-	assert.Equal(t, "status-warning", DiskStatusClass(model.StatusWarnScrutiny))
-	assert.Equal(t, "status-unknown", DiskStatusClass(model.StatusUnknown))
-	assert.Equal(t, "status-error", DiskStatusClass(model.StatusInternalError))
+	assert.Equal(t, "chip-ok", DiskStatusClass(model.StatusPassed))
+	assert.Equal(t, "chip-crit", DiskStatusClass(model.StatusFailedSmart))
+	assert.Equal(t, "chip-crit", DiskStatusClass(model.StatusFailedScrutiny))
+	assert.Equal(t, "chip-warn", DiskStatusClass(model.StatusWarnScrutiny))
+	assert.Equal(t, "chip-unk", DiskStatusClass(model.StatusUnknown))
+	assert.Equal(t, "chip-warn", DiskStatusClass(model.StatusInternalError))
 	// Combined flags
-	assert.Equal(t, "status-critical", DiskStatusClass(model.StatusFailedSmart|model.StatusWarnScrutiny))
+	assert.Equal(t, "chip-crit", DiskStatusClass(model.StatusFailedSmart|model.StatusWarnScrutiny))
 }
 
 func TestGuestStatusClass(t *testing.T) {
-	assert.Equal(t, "status-ok", GuestStatusClass("running"))
-	assert.Equal(t, "status-critical", GuestStatusClass("stopped"))
-	assert.Equal(t, "status-warning", GuestStatusClass("paused"))
+	assert.Equal(t, "chip-ok", GuestStatusClass("running"))
+	assert.Equal(t, "chip-crit", GuestStatusClass("stopped"))
+	assert.Equal(t, "chip-warn", GuestStatusClass("paused"))
 }
 
 func TestBackupStatusLabel(t *testing.T) {
 	now := time.Now()
-	assert.Equal(t, "OK", BackupStatusLabel(now.Add(-10*time.Hour).Unix(), 36))
-	assert.Equal(t, "STALE", BackupStatusLabel(now.Add(-48*time.Hour).Unix(), 36))
+	assert.Equal(t, "Ok", BackupStatusLabel(now.Add(-10*time.Hour).Unix(), 36))
+	assert.Equal(t, "Stale", BackupStatusLabel(now.Add(-48*time.Hour).Unix(), 36))
 }
 
 func TestBackupStatusClass(t *testing.T) {
 	now := time.Now()
-	assert.Equal(t, "status-ok", BackupStatusClass(now.Add(-10*time.Hour).Unix(), 36))
-	assert.Equal(t, "status-warning", BackupStatusClass(now.Add(-48*time.Hour).Unix(), 36))
+	assert.Equal(t, "chip-ok", BackupStatusClass(now.Add(-10*time.Hour).Unix(), 36))
+	assert.Equal(t, "chip-warn", BackupStatusClass(now.Add(-48*time.Hour).Unix(), 36))
 }
 
 func TestProgressBarWidth(t *testing.T) {
@@ -117,8 +117,8 @@ func TestProgressBarWidth(t *testing.T) {
 
 func TestProgressBarClass(t *testing.T) {
 	assert.Equal(t, "bar-ok", ProgressBarClass(50))
-	assert.Equal(t, "bar-warning", ProgressBarClass(80))
-	assert.Equal(t, "bar-critical", ProgressBarClass(95))
+	assert.Equal(t, "bar-warn", ProgressBarClass(80))
+	assert.Equal(t, "bar-crit", ProgressBarClass(95))
 }
 
 func TestCountGuestsByStatus(t *testing.T) {
@@ -211,10 +211,10 @@ func TestTaskDuration(t *testing.T) {
 }
 
 func TestTaskStatusClass(t *testing.T) {
-	assert.Equal(t, "status-ok", TaskStatusClass("OK"))
-	assert.Equal(t, "status-ok", TaskStatusClass(""))
-	assert.Equal(t, "status-critical", TaskStatusClass("Error: something broke"))
-	assert.Equal(t, "status-warning", TaskStatusClass("WARNINGS: disk almost full"))
+	assert.Equal(t, "chip-ok", TaskStatusClass("OK"))
+	assert.Equal(t, "chip-ok", TaskStatusClass(""))
+	assert.Equal(t, "chip-crit", TaskStatusClass("Error: something broke"))
+	assert.Equal(t, "chip-warn", TaskStatusClass("WARNINGS: disk almost full"))
 }
 
 func TestOldestPoll(t *testing.T) {
@@ -271,4 +271,35 @@ func TestHoursDisplay(t *testing.T) {
 	h2 := 28100
 	assert.Equal(t, "28,100", HoursDisplay(&h2))
 	assert.Equal(t, "--", HoursDisplay(nil))
+}
+
+func TestBackupsForGuest(t *testing.T) {
+	makeBackup := func(id, ds string) *model.Backup {
+		return &model.Backup{BackupID: id, Datastore: ds, BackupTime: 1000}
+	}
+	backups := map[string]map[string]*model.Backup{
+		"pbs1": {
+			"homelab/101":      makeBackup("101", "homelab"),    // plain VMID
+			"homelab/lxc-200":  makeBackup("lxc-200", "homelab"), // type-prefixed
+			"offsite/lxc-200":  makeBackup("lxc-200", "offsite"), // same guest, second datastore
+			"homelab/lxc-1010": makeBackup("lxc-1010", "homelab"), // longer id — must not match 10
+		},
+	}
+
+	// Plain numeric backup-id
+	got := BackupsForGuest(backups, 101)
+	assert.Len(t, got, 1)
+	assert.Equal(t, "101", got[0].BackupID)
+
+	// Prefixed backup-id (lxc-200) present in two datastores
+	got = BackupsForGuest(backups, 200)
+	assert.Len(t, got, 2)
+
+	// "lxc-1010" must not match VMID 10
+	got = BackupsForGuest(backups, 10)
+	assert.Empty(t, got)
+
+	// No backups at all for this VMID
+	got = BackupsForGuest(backups, 999)
+	assert.Empty(t, got)
 }
