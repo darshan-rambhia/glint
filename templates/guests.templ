@@ -24,18 +24,18 @@ templ GuestsFragment(snap cache.CacheSnapshot) {
 			<div class="empty-state">No guests found.</div>
 		} else {
 			<div class="table-scroll">
-				<table class="data-table">
+				<table id="tbl-guests" class="data-table">
 					<thead>
 						<tr>
-							<th>ID</th>
-							<th>Name</th>
-							<th>Type</th>
-							<th>Status</th>
-							<th>CPU</th>
-							<th>Memory</th>
-							<th>Disk</th>
+							<th data-sort-key="id">ID</th>
+							<th data-sort-key="name">Name</th>
+							<th data-sort-key="type">Type</th>
+							<th data-sort-key="status">Status</th>
+							<th data-sort-key="cpu">CPU</th>
+							<th data-sort-key="memory">Memory</th>
+							<th data-sort-key="disk">Disk</th>
 							if len(snap.Backups) > 0 {
-								<th>Last backup</th>
+								<th data-sort-key="backup">Last backup</th>
 							}
 						</tr>
 					</thead>
@@ -70,7 +70,12 @@ templ GuestRow(guest *model.Guest, backups map[string]map[string]*model.Backup) 
 				}
 			</span>
 		</td>
-		<td>
+		<td data-sort-value={ func() string {
+			if guest.CPUs > 0 {
+				return fmt.Sprintf("%.4f", guest.CPU/float64(guest.CPUs)*100)
+			}
+			return "0"
+		}() }>
 			if guest.CPUs > 0 {
 				<div class="mini-bar">
 					<div class="bar">
@@ -82,7 +87,7 @@ templ GuestRow(guest *model.Guest, backups map[string]map[string]*model.Backup) 
 				<span class="td-dim">0%</span>
 			}
 		</td>
-		<td>
+		<td data-sort-value={ fmt.Sprintf("%d", guest.Mem) }>
 			<div class="mini-bar">
 				<div class="bar">
 					<div class={ "bar-fill", ProgressBarClass(MemPct(guest.Mem, guest.MaxMem)) } style={ fmt.Sprintf("width:%.0f%%", ProgressBarWidth(MemPct(guest.Mem, guest.MaxMem))) }></div>
@@ -90,9 +95,11 @@ templ GuestRow(guest *model.Guest, backups map[string]map[string]*model.Backup) 
 				{ FormatBytes(guest.Mem) }
 			</div>
 		</td>
-		<td>{ FormatBytes(guest.Disk) }</td>
+		<td data-sort-value={ fmt.Sprintf("%d", guest.Disk) }>{ FormatBytes(guest.Disk) }</td>
 		if len(backups) > 0 {
-			<td>@GuestBackupCell(BackupsForGuest(backups, guest.VMID))</td>
+			<td data-sort-value={ fmt.Sprintf("%d", LatestBackupTime(backups, guest.VMID)) }>
+				@GuestBackupCell(BackupsForGuest(backups, guest.VMID))
+			</td>
 		}
 	</tr>
 }

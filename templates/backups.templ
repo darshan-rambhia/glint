@@ -33,15 +33,15 @@ templ BackupsFragment(snap cache.CacheSnapshot) {
 			}
 			if len(snap.Backups) > 0 {
 				<div class="table-scroll">
-					<table class="data-table">
+					<table id="tbl-backups" class="data-table">
 						<thead>
 							<tr>
-								<th>Guest</th>
-								<th>Datastore</th>
-								<th>Last backup</th>
-								<th>Size</th>
-								<th>Age</th>
-								<th>Status</th>
+								<th data-sort-key="guest">Guest</th>
+								<th data-sort-key="datastore">Datastore</th>
+								<th data-sort-key="time">Last backup</th>
+								<th data-sort-key="size">Size</th>
+								<th data-sort-key="age">Age</th>
+								<th data-sort-key="status">Status</th>
 							</tr>
 						</thead>
 						<tbody>
@@ -66,14 +66,14 @@ templ EventsFragment(snap cache.CacheSnapshot) {
 			<div class="empty-state">No server-side events in the last 7 days · client-initiated backups do not appear here</div>
 		} else {
 			<div class="table-scroll">
-				<table class="data-table">
+				<table id="tbl-events" class="data-table">
 					<thead>
 						<tr>
-							<th>Type</th>
-							<th>ID</th>
-							<th>Started</th>
-							<th>Duration</th>
-							<th>Status</th>
+							<th data-sort-key="type">Type</th>
+							<th data-sort-key="id">ID</th>
+							<th data-sort-key="started">Started</th>
+							<th data-sort-key="duration">Duration</th>
+							<th data-sort-key="status">Status</th>
 						</tr>
 					</thead>
 					<tbody>
@@ -118,15 +118,15 @@ templ BackupRow(backup *model.Backup) {
 	<tr>
 		<td class="td-name">{ backup.BackupType }/{ backup.BackupID }</td>
 		<td>{ backup.Datastore }</td>
-		<td>{ FormatTime(backup.BackupTime) }</td>
-		<td>
+		<td data-sort-value={ fmt.Sprintf("%d", backup.BackupTime) }>{ FormatTime(backup.BackupTime) }</td>
+		<td data-sort-value={ fmt.Sprintf("%d", Int64Deref(backup.SizeBytes)) }>
 			if backup.SizeBytes != nil {
 				{ FormatBytes(Int64Deref(backup.SizeBytes)) }
 			} else {
 				<span class="td-dim">—</span>
 			}
 		</td>
-		<td class="td-dim">{ FormatAge(backup.BackupTime) }</td>
+		<td class="td-dim" data-sort-value={ fmt.Sprintf("%d", backup.BackupTime) }>{ FormatAge(backup.BackupTime) }</td>
 		<td>
 			<span class={ "chip", BackupStatusClass(backup.BackupTime, BackupStaleHours) }>
 				{ BackupStatusLabel(backup.BackupTime, BackupStaleHours) }
@@ -139,8 +139,8 @@ templ TaskRow(task *model.PBSTask) {
 	<tr>
 		<td>{ task.Type }</td>
 		<td>{ task.ID }</td>
-		<td class="td-dim">{ FormatTime(task.StartTime) }</td>
-		<td class="td-dim">{ TaskDuration(task) }</td>
+		<td class="td-dim" data-sort-value={ fmt.Sprintf("%d", task.StartTime) }>{ FormatTime(task.StartTime) }</td>
+		<td class="td-dim" data-sort-value={ fmt.Sprintf("%d", TaskDurationSeconds(task)) }>{ TaskDuration(task) }</td>
 		<td>
 			<span class={ "chip", TaskStatusClass(task.Status) }>
 				if task.Status == "" {

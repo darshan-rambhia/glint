@@ -32,7 +32,7 @@ func FormatBytes(b int64) string {
 		div *= unit
 		exp++
 	}
-	units := []string{"KB", "MB", "GB", "TB", "PB"}
+	units := []string{"KB", "MB", "GB", "TB", "PB", "EB"}
 	return fmt.Sprintf("%.1f %s", float64(b)/float64(div), units[exp])
 }
 
@@ -310,6 +310,33 @@ func AllTasksSorted(tasks map[string][]*model.PBSTask) []*model.PBSTask {
 	}
 	sort.Slice(list, func(i, j int) bool { return list[i].StartTime > list[j].StartTime })
 	return list
+}
+
+// LatestBackupTime returns the most recent backup timestamp for a guest, or 0 if none.
+func LatestBackupTime(backups map[string]map[string]*model.Backup, vmid int) int64 {
+	bs := BackupsForGuest(backups, vmid)
+	if len(bs) == 0 {
+		return 0
+	}
+	return bs[0].BackupTime
+}
+
+// IntPtrSortValue returns the integer as a string, or "-1" if the pointer is nil.
+// Used for data-sort-value attributes so nil values sort before valid ones.
+func IntPtrSortValue(p *int) string {
+	if p == nil {
+		return "-1"
+	}
+	return fmt.Sprintf("%d", *p)
+}
+
+// TaskDurationSeconds returns the raw duration in seconds for a completed task,
+// or -1 for still-running tasks (so they sort before completed ones).
+func TaskDurationSeconds(t *model.PBSTask) int64 {
+	if t.EndTime == nil {
+		return -1
+	}
+	return *t.EndTime - t.StartTime
 }
 
 // TaskDuration returns formatted task duration.

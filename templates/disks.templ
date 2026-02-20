@@ -16,17 +16,17 @@ templ DisksFragment(snap cache.CacheSnapshot) {
 			<div class="empty-state">No disks detected yet. SMART data is polled hourly.</div>
 		} else {
 			<div class="table-scroll">
-				<table class="data-table">
+				<table id="tbl-disks" class="data-table">
 					<thead>
 						<tr>
-							<th>Device</th>
-							<th>Type</th>
-							<th>Model</th>
-							<th>Size</th>
-							<th>Health</th>
-							<th>Temp</th>
-							<th>Hours</th>
-							<th>Wear</th>
+							<th data-sort-key="device">Device</th>
+							<th data-sort-key="type">Type</th>
+							<th data-sort-key="model">Model</th>
+							<th data-sort-key="size">Size</th>
+							<th data-sort-key="health">Health</th>
+							<th data-sort-key="temp">Temp</th>
+							<th data-sort-key="hours">Hours</th>
+							<th data-sort-key="wear">Wear</th>
 							<th></th>
 						</tr>
 					</thead>
@@ -46,15 +46,15 @@ templ DiskRow(disk *model.Disk) {
 		<td class="td-name">{ disk.DevPath }</td>
 		<td class="td-dim">{ disk.DiskType }</td>
 		<td>{ disk.Model }</td>
-		<td>{ FormatBytes(disk.SizeBytes) }</td>
-		<td>
+		<td data-sort-value={ fmt.Sprintf("%d", disk.SizeBytes) }>{ FormatBytes(disk.SizeBytes) }</td>
+		<td data-sort-value={ fmt.Sprintf("%d", disk.Status) }>
 			<span class={ "chip", DiskStatusClass(disk.Status) }>
 				{ disk.Health }
 			</span>
 		</td>
-		<td>{ TempDisplay(disk.Temperature) }</td>
-		<td>{ HoursDisplay(disk.PowerOnHours) }</td>
-		<td>{ WearoutDisplay(disk.Wearout) }</td>
+		<td data-sort-value={ IntPtrSortValue(disk.Temperature) }>{ TempDisplay(disk.Temperature) }</td>
+		<td data-sort-value={ IntPtrSortValue(disk.PowerOnHours) }>{ HoursDisplay(disk.PowerOnHours) }</td>
+		<td data-sort-value={ IntPtrSortValue(disk.Wearout) }>{ WearoutDisplay(disk.Wearout) }</td>
 		<td>
 			if len(disk.Attributes) > 0 {
 				<button
