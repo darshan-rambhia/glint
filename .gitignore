@@ -1,4 +1,6 @@
 /glint
+/bench
+/fuzz
 bin/
 dist/
 target/
