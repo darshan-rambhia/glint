@@ -223,27 +223,31 @@ func (p *PVECollector) Collect(ctx context.Context) error {
 	return nil
 }
 
-func (p *PVECollector) apiGet(ctx context.Context, path string) ([]byte, error) {
+func (p *PVECollector) apiGet(ctx context.Context, op, path string) ([]byte, error) {
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
 	url := strings.TrimRight(p.config.Host, "/") + path
+	slog.Debug("PVE API request", "instance", p.config.Name, "op", op, "path", path)
+
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
-		return nil, fmt.Errorf("creating request for %s: %w", path, err)
+		return nil, fmt.Errorf("%s: creating request for %s: %w", op, path, err)
 	}
 	req.Header.Set("Authorization", "PVEAPIToken="+p.config.TokenID+"="+p.config.TokenSecret)
 
 	resp, err := p.client.Do(req)
 	if err != nil {
-		return nil, NewRetryableError(fmt.Errorf("requesting %s: %w", path, err))
+		return nil, NewRetryableError(fmt.Errorf("%s: requesting %s: %w", op, path, err))
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(io.LimitReader(resp.Body, 10<<20)) // 10 MB max
 	if err != nil {
-		return nil, fmt.Errorf("reading response from %s: %w", path, err)
+		return nil, fmt.Errorf("%s: reading response from %s: %w", op, path, err)
 	}
+
+	slog.Debug("PVE API response", "instance", p.config.Name, "op", op, "path", path, "status", resp.StatusCode)
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, &APIError{
@@ -271,7 +275,7 @@ func pveNormalizeSentinel(s string) string {
 }
 
 func (p *PVECollector) discoverNodes(ctx context.Context) error {
-	body, err := p.apiGet(ctx, "/api2/json/nodes")
+	body, err := p.apiGet(ctx, "discoverNodes", "/api2/json/nodes")
 	if err != nil {
 		return err
 	}
@@ -300,7 +304,7 @@ func (p *PVECollector) discoverNodes(ctx context.Context) error {
 }
 
 func (p *PVECollector) detectCluster(ctx context.Context) error {
-	body, err := p.apiGet(ctx, "/api2/json/cluster/status")
+	body, err := p.apiGet(ctx, "detectCluster", "/api2/json/cluster/status")
 	if err != nil {
 		return err
 	}
@@ -328,7 +332,7 @@ func (p *PVECollector) detectCluster(ctx context.Context) error {
 }
 
 func (p *PVECollector) collectNodeStatus(ctx context.Context, nodeName string) (*model.Node, error) {
-	body, err := p.apiGet(ctx, fmt.Sprintf("/api2/json/nodes/%s/status", nodeName))
+	body, err := p.apiGet(ctx, "collectNodeStatus", fmt.Sprintf("/api2/json/nodes/%s/status", nodeName))
 	if err != nil {
 		return nil, err
 	}
@@ -438,7 +442,7 @@ func (p *PVECollector) collectGuests(ctx context.Context, nodeName string) ([]*m
 }
 
 func (p *PVECollector) collectGuestType(ctx context.Context, nodeName, guestType string) ([]*model.Guest, error) {
-	body, err := p.apiGet(ctx, fmt.Sprintf("/api2/json/nodes/%s/%s", nodeName, guestType))
+	body, err := p.apiGet(ctx, "collectGuests:"+guestType, fmt.Sprintf("/api2/json/nodes/%s/%s", nodeName, guestType))
 	if err != nil {
 		return nil, err
 	}
@@ -495,7 +499,7 @@ func (p *PVECollector) collectDisks(ctx context.Context, nodeName string) ([]*mo
 	// Without it, PVE runs smartctl for every disk during the list call, which can cause
 	// timeouts on drives that are slow to respond (e.g. spinning HDDs in standby).
 	// We collect SMART data ourselves in a separate per-disk call below.
-	body, err := p.apiGet(ctx, fmt.Sprintf("/api2/json/nodes/%s/disks/list?skipsmart=1", nodeName))
+	body, err := p.apiGet(ctx, "collectDisks", fmt.Sprintf("/api2/json/nodes/%s/disks/list?skipsmart=1", nodeName))
 	if err != nil {
 		return nil, err
 	}
@@ -593,7 +597,7 @@ func (p *PVECollector) collectSMARTWithType(ctx context.Context, nodeName string
 	if smartType != "" {
 		u += "&type=" + url.QueryEscape(smartType)
 	}
-	body, err := p.apiGet(ctx, u)
+	body, err := p.apiGet(ctx, "collectSMART", u)
 	if err != nil {
 		// Some PVE versions reject the "type" query parameter with a 400.
 		// Cascade through the fallback chain before surfacing the error.

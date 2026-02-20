@@ -162,31 +162,31 @@ func (c *PBSCollector) Collect(ctx context.Context) error {
 	return nil
 }
 
-func (c *PBSCollector) apiGet(ctx context.Context, path string) ([]byte, error) {
+func (c *PBSCollector) apiGet(ctx context.Context, op, path string) ([]byte, error) {
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
 	url := strings.TrimRight(c.config.Host, "/") + path
-	slog.Debug("PBS API request", "instance", c.config.Name, "url", url)
+	slog.Debug("PBS API request", "instance", c.config.Name, "op", op, "path", path)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
-		return nil, fmt.Errorf("creating request for %s: %w", path, err)
+		return nil, fmt.Errorf("%s: creating request for %s: %w", op, path, err)
 	}
 	req.Header.Set("Authorization", "PBSAPIToken="+c.config.TokenID+":"+c.config.TokenSecret)
 
 	resp, err := c.client.Do(req)
 	if err != nil {
-		return nil, NewRetryableError(fmt.Errorf("requesting %s: %w", path, err))
+		return nil, NewRetryableError(fmt.Errorf("%s: requesting %s: %w", op, path, err))
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(io.LimitReader(resp.Body, 10<<20)) // 10 MB max
 	if err != nil {
-		return nil, fmt.Errorf("reading response from %s: %w", path, err)
+		return nil, fmt.Errorf("%s: reading response from %s: %w", op, path, err)
 	}
 
-	slog.Debug("PBS API response", "instance", c.config.Name, "path", path, "status", resp.StatusCode)
+	slog.Debug("PBS API response", "instance", c.config.Name, "op", op, "path", path, "status", resp.StatusCode)
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, &APIError{
@@ -201,7 +201,7 @@ func (c *PBSCollector) apiGet(ctx context.Context, path string) ([]byte, error) 
 // collectAllDatastoreUsage fetches all datastores via the system-wide endpoint.
 // Requires system-level permissions; used when no specific datastores are configured.
 func (c *PBSCollector) collectAllDatastoreUsage(ctx context.Context) (map[string]*model.DatastoreStatus, error) {
-	body, err := c.apiGet(ctx, "/api2/json/status/datastore-usage")
+	body, err := c.apiGet(ctx, "collectDatastoreUsage", "/api2/json/status/datastore-usage")
 	if err != nil {
 		return nil, err
 	}
@@ -236,7 +236,7 @@ func (c *PBSCollector) collectAllDatastoreUsage(ctx context.Context) (map[string
 // collectDatastoreStatus fetches status for a single named datastore.
 // Only requires datastore-scoped permissions on /datastore/{name}.
 func (c *PBSCollector) collectDatastoreStatus(ctx context.Context, datastore string) (*model.DatastoreStatus, error) {
-	body, err := c.apiGet(ctx, fmt.Sprintf("/api2/json/admin/datastore/%s/status", datastore))
+	body, err := c.apiGet(ctx, "collectDatastoreStatus", fmt.Sprintf("/api2/json/admin/datastore/%s/status", datastore))
 	if err != nil {
 		return nil, err
 	}
@@ -264,7 +264,7 @@ func (c *PBSCollector) collectDatastoreStatus(ctx context.Context, datastore str
 }
 
 func (c *PBSCollector) collectSnapshots(ctx context.Context, datastore string) ([]*model.Backup, error) {
-	body, err := c.apiGet(ctx, fmt.Sprintf("/api2/json/admin/datastore/%s/snapshots", datastore))
+	body, err := c.apiGet(ctx, "collectSnapshots", fmt.Sprintf("/api2/json/admin/datastore/%s/snapshots", datastore))
 	if err != nil {
 		return nil, err
 	}
@@ -305,7 +305,7 @@ func (c *PBSCollector) collectSnapshots(ctx context.Context, datastore string) (
 
 func (c *PBSCollector) collectTasks(ctx context.Context) ([]*model.PBSTask, error) {
 	since := time.Now().Add(-7 * 24 * time.Hour).Unix()
-	body, err := c.apiGet(ctx, fmt.Sprintf("/api2/json/nodes/localhost/tasks?since=%d&limit=200", since))
+	body, err := c.apiGet(ctx, "collectTasks", fmt.Sprintf("/api2/json/nodes/localhost/tasks?since=%d&limit=200", since))
 	if err != nil {
 		return nil, err
 	}

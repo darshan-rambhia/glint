@@ -45,21 +45,21 @@ var nvmeFieldMap = map[string]struct {
 func ParseNVMeText(text string) ([]model.SMARTAttribute, error) {
 	attrs := make([]model.SMARTAttribute, 0, len(nvmeFieldMap))
 
-	lines := strings.Split(text, "\n")
-	for _, line := range lines {
+	lines := strings.SplitSeq(text, "\n")
+	for line := range lines {
 		line = strings.TrimSpace(line)
 		if line == "" {
 			continue
 		}
 
 		// Split on first colon.
-		idx := strings.Index(line, ":")
-		if idx < 0 {
+		before, after, ok := strings.Cut(line, ":")
+		if !ok {
 			continue
 		}
 
-		key := strings.TrimSpace(line[:idx])
-		valStr := strings.TrimSpace(line[idx+1:])
+		key := strings.TrimSpace(before)
+		valStr := strings.TrimSpace(after)
 
 		keyLower := strings.ToLower(key)
 		field, ok := nvmeFieldMap[keyLower]
@@ -92,8 +92,8 @@ func parseNVMeValue(s string) (int64, string) {
 	}
 
 	// Handle hex values.
-	if strings.HasPrefix(s, "0x") {
-		val, err := strconv.ParseInt(strings.TrimPrefix(s, "0x"), 16, 64)
+	if after, ok := strings.CutPrefix(s, "0x"); ok {
+		val, err := strconv.ParseInt(after, 16, 64)
 		if err != nil {
 			return 0, s
 		}

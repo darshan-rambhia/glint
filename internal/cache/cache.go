@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"maps"
 	"sync"
 	"time"
 
@@ -113,9 +114,7 @@ func (c *Cache) Snapshot() CacheSnapshot {
 		snap.Tasks[inst] = sl
 	}
 
-	for k, v := range c.LastPoll {
-		snap.LastPoll[k] = v
-	}
+	maps.Copy(snap.LastPoll, c.LastPoll)
 
 	return snap
 }
@@ -139,9 +138,7 @@ func (c *Cache) UpdateGuests(clusterID string, guests map[int]*model.Guest) {
 func (c *Cache) UpdateDisks(disks map[string]*model.Disk) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	for wwn, d := range disks {
-		c.Disks[wwn] = d
-	}
+	maps.Copy(c.Disks, disks)
 }
 
 // UpdateDatastores replaces all datastores for the given PBS instance.
