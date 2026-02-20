@@ -71,6 +71,7 @@ Full documentation is available at **[darshan-rambhia.github.io/glint](https://d
 | [Getting Started](https://darshan-rambhia.github.io/glint/getting-started/) | Create API tokens, write your config, deploy |
 | [Configuration](https://darshan-rambhia.github.io/glint/configuration/) | Full config reference — YAML options, env vars, defaults |
 | [Deployment](https://darshan-rambhia.github.io/glint/deployment/) | Docker, Podman, Quadlet, systemd bare metal |
+| [Reverse Proxy](https://darshan-rambhia.github.io/glint/reverse-proxy/) | Caddy, nginx, Traefik with TLS and authentication |
 | [Logging](https://darshan-rambhia.github.io/glint/logging/) | Log formats, levels, systemd/journald integration |
 | [Architecture](https://darshan-rambhia.github.io/glint/architecture/) | How Glint works — collectors, cache, store, alerter |
 | [API Reference](https://darshan-rambhia.github.io/glint/api/) | OpenAPI spec, JSON API, htmx fragment endpoints |

@@ -276,11 +276,8 @@ brew untap darshan-rambhia/tap
 If you have [Go 1.26+](https://go.dev/dl/) installed, you can install Glint directly from source:
 
 ```bash
-CGO_ENABLED=1 go install github.com/darshan-rambhia/glint/cmd/glint@latest
+go install github.com/darshan-rambhia/glint/cmd/glint@latest
 ```
-
-!!! note "CGO is required"
-    Glint uses SQLite, which requires a C compiler. `CGO_ENABLED=1` tells Go to use it. On most Linux systems, `gcc` is already installed. On Debian/Ubuntu, install it with `sudo apt install build-essential`. On macOS, install Xcode command line tools with `xcode-select --install`.
 
 The binary is installed to `$GOPATH/bin` (usually `~/go/bin`). Make sure this is in your `PATH`:
 
@@ -295,7 +292,7 @@ export PATH=$PATH:$(go env GOPATH)/bin
 To install a specific version:
 
 ```bash
-CGO_ENABLED=1 go install github.com/darshan-rambhia/glint/cmd/glint@v0.1.0
+go install github.com/darshan-rambhia/glint/cmd/glint@v0.1.0
 ```
 
 Once installed, create a config file and run it:
