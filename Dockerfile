@@ -1,13 +1,13 @@
 FROM golang:1.26-alpine AS builder
-RUN apk add --no-cache git gcc musl-dev
+RUN apk add --no-cache git
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
 RUN go install github.com/a-h/templ/cmd/templ@latest && templ generate
 ARG VERSION=dev
-RUN CGO_ENABLED=1 go build \
-    -ldflags="-s -w -linkmode external -extldflags '-static' \
+RUN CGO_ENABLED=0 go build \
+    -ldflags="-s -w \
       -X main.version=${VERSION} \
       -X main.commit=$(git rev-parse HEAD 2>/dev/null || echo unknown) \
       -X main.buildTime=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \

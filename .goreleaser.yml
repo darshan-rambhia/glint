@@ -21,14 +21,18 @@ builds:
 dockers:
   - image_templates:
       - "ghcr.io/darshan-rambhia/glint:{{ .Version }}-amd64"
-    dockerfile: Dockerfile
+    dockerfile: Dockerfile.goreleaser
     use: buildx
+    extra_files:
+      - static
     build_flag_templates:
       - "--platform=linux/amd64"
   - image_templates:
       - "ghcr.io/darshan-rambhia/glint:{{ .Version }}-arm64"
-    dockerfile: Dockerfile
+    dockerfile: Dockerfile.goreleaser
     use: buildx
+    extra_files:
+      - static
     build_flag_templates:
       - "--platform=linux/arm64"
 

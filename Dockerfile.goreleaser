@@ -1,0 +1,12 @@
+FROM alpine:3.21 AS certs
+RUN apk add --no-cache ca-certificates tzdata
+
+FROM scratch
+COPY --from=certs /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+COPY --from=certs /usr/share/zoneinfo /usr/share/zoneinfo
+COPY glint /usr/local/bin/glint
+COPY static /static
+USER 65534:65534
+EXPOSE 3800
+VOLUME ["/data"]
+ENTRYPOINT ["glint"]
