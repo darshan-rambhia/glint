@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/darshan-rambhia/glint/internal/cache"
 	"github.com/darshan-rambhia/glint/internal/model"
 	"github.com/stretchr/testify/assert"
 )
@@ -302,4 +303,119 @@ func TestBackupsForGuest(t *testing.T) {
 	// No backups at all for this VMID
 	got = BackupsForGuest(backups, 999)
 	assert.Empty(t, got)
+}
+
+func TestSortedNodeList(t *testing.T) {
+	n1 := &model.Node{Name: "node1"}
+	n2 := &model.Node{Name: "node2"}
+	nodes := map[string]map[string]*model.Node{
+		"pve2": {"node2": n2},
+		"pve1": {"node1": n1},
+	}
+	list := SortedNodeList(nodes)
+	assert.Len(t, list, 2)
+	assert.Equal(t, "pve1", list[0].Instance)
+	assert.Equal(t, "node1", list[0].Node.Name)
+	assert.Equal(t, "pve2", list[1].Instance)
+}
+
+func TestSortedNodeList_Empty(t *testing.T) {
+	assert.Empty(t, SortedNodeList(nil))
+}
+
+func TestSortedDatastoreList(t *testing.T) {
+	ds1 := &model.DatastoreStatus{Name: "alpha"}
+	ds2 := &model.DatastoreStatus{Name: "beta"}
+	datastores := map[string]map[string]*model.DatastoreStatus{
+		"pbs1": {"alpha": ds1, "beta": ds2},
+	}
+	list := SortedDatastoreList(datastores)
+	assert.Len(t, list, 2)
+	assert.Equal(t, "alpha", list[0].Datastore.Name)
+	assert.Equal(t, "beta", list[1].Datastore.Name)
+}
+
+func TestSortedDatastoreList_Empty(t *testing.T) {
+	assert.Empty(t, SortedDatastoreList(nil))
+}
+
+func TestNodeCount(t *testing.T) {
+	nodes := map[string]map[string]*model.Node{
+		"pve1": {"n1": {}, "n2": {}},
+		"pve2": {"n3": {}},
+	}
+	assert.Equal(t, 3, NodeCount(nodes))
+	assert.Equal(t, 0, NodeCount(nil))
+}
+
+func TestDatastoreCount(t *testing.T) {
+	ds := map[string]map[string]*model.DatastoreStatus{
+		"pbs1": {"a": {}, "b": {}},
+		"pbs2": {"c": {}},
+	}
+	assert.Equal(t, 3, DatastoreCount(ds))
+	assert.Equal(t, 0, DatastoreCount(nil))
+}
+
+func TestAllBackupsSorted_TieBreak(t *testing.T) {
+	b1 := &model.Backup{BackupID: "101", Datastore: "ds1", BackupTime: 200}
+	b2 := &model.Backup{BackupID: "102", Datastore: "ds1", BackupTime: 100}
+	b3 := &model.Backup{BackupID: "101", Datastore: "ds2", BackupTime: 200}
+	backups := map[string]map[string]*model.Backup{
+		"pbs1": {"a": b1, "b": b2, "c": b3},
+	}
+	list := AllBackupsSorted(backups)
+	assert.Len(t, list, 3)
+	// Most recent first.
+	assert.Equal(t, int64(200), list[0].BackupTime)
+	assert.Equal(t, int64(200), list[1].BackupTime)
+	assert.Equal(t, int64(100), list[2].BackupTime)
+	// Tie-break by BackupID then Datastore.
+	assert.Equal(t, "101", list[0].BackupID)
+	assert.Equal(t, "ds1", list[0].Datastore)
+	assert.Equal(t, "101", list[1].BackupID)
+	assert.Equal(t, "ds2", list[1].Datastore)
+
+	assert.Empty(t, AllBackupsSorted(nil))
+}
+
+func TestHeaderSummary(t *testing.T) {
+	snap := cache.CacheSnapshot{
+		Nodes: map[string]map[string]*model.Node{
+			"pve1": {"n1": {}, "n2": {}},
+		},
+		Guests: map[string]map[int]*model.Guest{
+			"pve1": {
+				101: {Status: "running"},
+				102: {Status: "stopped"},
+				103: {Status: "running"},
+			},
+		},
+	}
+	assert.Equal(t, "2 nodes · 2 running", HeaderSummary(snap))
+}
+
+func TestHeaderSummary_Empty(t *testing.T) {
+	assert.Equal(t, "0 nodes · 0 running", HeaderSummary(cache.CacheSnapshot{}))
+}
+
+func TestSparklinePolyline(t *testing.T) {
+	// Empty input.
+	assert.Empty(t, SparklinePolyline(nil, 240, 40))
+
+	// Single point — x should be width/2, y at bottom (min value = bottom in SVG).
+	single := []model.SparklinePoint{{Value: 50}}
+	out := SparklinePolyline(single, 240, 40)
+	assert.Equal(t, "120.0,40.0", out)
+
+	// Flat line (all same value) — should not divide by zero.
+	flat := []model.SparklinePoint{{Value: 10}, {Value: 10}}
+	out = SparklinePolyline(flat, 240, 40)
+	assert.NotEmpty(t, out)
+
+	// Two distinct points — first should be at x=0, last at x=width.
+	points := []model.SparklinePoint{{Value: 0}, {Value: 100}}
+	out = SparklinePolyline(points, 240, 40)
+	assert.Contains(t, out, "0.0,")
+	assert.Contains(t, out, "240.0,")
 }
