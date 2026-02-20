@@ -279,9 +279,9 @@ func TestBackupsForGuest(t *testing.T) {
 	}
 	backups := map[string]map[string]*model.Backup{
 		"pbs1": {
-			"homelab/101":      makeBackup("101", "homelab"),    // plain VMID
-			"homelab/lxc-200":  makeBackup("lxc-200", "homelab"), // type-prefixed
-			"offsite/lxc-200":  makeBackup("lxc-200", "offsite"), // same guest, second datastore
+			"homelab/101":      makeBackup("101", "homelab"),      // plain VMID
+			"homelab/lxc-200":  makeBackup("lxc-200", "homelab"),  // type-prefixed
+			"offsite/lxc-200":  makeBackup("lxc-200", "offsite"),  // same guest, second datastore
 			"homelab/lxc-1010": makeBackup("lxc-1010", "homelab"), // longer id — must not match 10
 		},
 	}

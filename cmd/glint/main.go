@@ -143,7 +143,7 @@ func main() {
 
 	// Setup context with signal handling.
 	// Keep sigCtx separate so we can call stop() after the first signal fires,
-	// which re-enables default signal behaviour — a second Ctrl-C / SIGTERM
+	// which re-enables default signal behavior — a second Ctrl-C / SIGTERM
 	// will then kill the process immediately if the graceful shutdown hangs.
 	sigCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()

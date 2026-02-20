@@ -643,30 +643,31 @@ func (p *PVECollector) collectSMARTWithType(ctx context.Context, nodeName string
 
 	// Parse SMART attributes using the smart package.
 	var attrs []model.SMARTAttribute
-	if disk.Protocol == "nvme" && smartData.Text != "" {
+	switch {
+	case disk.Protocol == "nvme" && smartData.Text != "":
 		parsed, err := smart.ParseNVMeText(smartData.Text)
 		if err != nil {
 			slog.Debug("parsing NVMe SMART text", "disk", disk.DevPath, "error", err)
 		} else {
 			attrs = parsed
 		}
-	} else if len(smartData.Attributes) > 0 {
+	case len(smartData.Attributes) > 0:
 		parsed, err := smart.ParseATAAttributes(smartData.Attributes)
 		if err != nil {
 			slog.Debug("parsing ATA SMART attributes", "disk", disk.DevPath, "error", err)
 		} else {
 			attrs = parsed
 		}
-	} else if smartType == "scsi" && smartData.Text != "" {
+	case smartType == "scsi" && smartData.Text != "":
 		// SCSI text output — parse for temperature/power-on hours.
 		attrs = smart.ParseSCSIText(smartData.Text)
 		slog.Debug("PVE SMART SCSI text parsed", "disk", disk.DevPath, "attrs", len(attrs))
-	} else if disk.Protocol == "ata" && smartType == "" {
+	case disk.Protocol == "ata" && smartType == "":
 		// PVE returned no structured data (common for SATA drives behind an HBA).
 		// Try sat (SCSI-to-ATA Translation passthrough), then scsi.
 		slog.Debug("PVE SMART retrying with sat", "disk", disk.DevPath)
 		return p.collectSMARTWithType(ctx, nodeName, disk, "sat")
-	} else if disk.Protocol == "ata" && smartType == "sat" {
+	case disk.Protocol == "ata" && smartType == "sat":
 		// SAT also returned nothing — try SCSI mode sense (works for drives
 		// that respond to SCSI commands rather than ATA commands).
 		slog.Debug("PVE SMART retrying with scsi", "disk", disk.DevPath)

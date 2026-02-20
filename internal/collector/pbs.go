@@ -243,10 +243,10 @@ func (c *PBSCollector) collectDatastoreStatus(ctx context.Context, datastore str
 
 	var resp struct {
 		Data struct {
-			Total *int64   `json:"total"`
-			Used  *int64   `json:"used"`
-			Avail *int64   `json:"avail"`
-			Error *string  `json:"error"`
+			Total *int64  `json:"total"`
+			Used  *int64  `json:"used"`
+			Avail *int64  `json:"avail"`
+			Error *string `json:"error"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(body, &resp); err != nil {

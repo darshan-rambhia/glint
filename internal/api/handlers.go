@@ -386,4 +386,3 @@ func (s *Server) handleHealthz(w http.ResponseWriter, r *http.Request) {
 		slog.Error("encoding healthz response", "error", err)
 	}
 }
-

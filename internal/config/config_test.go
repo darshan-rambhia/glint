@@ -396,7 +396,6 @@ func TestValidate_ValidConfig(t *testing.T) {
 	assert.NoError(t, cfg.Validate())
 }
 
-
 func TestLoad_InvalidYAML(t *testing.T) {
 	clearEnv(t)
 	path := writeYAML(t, "{{invalid yaml")
