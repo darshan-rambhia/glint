@@ -6,6 +6,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Go Report Card](https://goreportcard.com/badge/github.com/darshan-rambhia/glint)](https://goreportcard.com/report/github.com/darshan-rambhia/glint)
 [![Docker Image](https://img.shields.io/badge/ghcr.io-glint-blue?logo=docker)](https://ghcr.io/darshan-rambhia/glint)
+[![Docs](https://img.shields.io/badge/docs-darshan--rambhia.github.io%2Fglint-blue)](https://darshan-rambhia.github.io/glint)
 
 Lightweight Proxmox monitoring dashboard. Single binary, ~10MB, ~30-50MB RAM.
 

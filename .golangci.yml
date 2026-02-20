@@ -80,7 +80,6 @@ linters:
     gosec:
       excludes:
         - G104  # unhandled errors (errcheck already covers this)
-        - G106  # ssh InsecureIgnoreHostKey (intentional for homelab use)
         - G201  # SQL string formatting (controlled input, not user-supplied)
         - G204  # subprocess with variable args (coverage tool only)
         - G301  # directory permissions (0755 is fine for report dirs)
