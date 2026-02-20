@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"math"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -361,11 +362,11 @@ func parseNodeStatus(instance, nodeName string, data json.RawMessage) (*model.No
 			Used  int64 `json:"used"`
 			Total int64 `json:"total"`
 		} `json:"rootfs"`
-		LoadAvg    interface{} `json:"loadavg"` // can be []float64 or []string
-		Uptime     int64       `json:"uptime"`
-		Wait       float64     `json:"wait"`
-		PVEVersion string      `json:"pveversion"`
-		KVersion   string      `json:"kversion"`
+		LoadAvg    any     `json:"loadavg"` // can be []float64 or []string
+		Uptime     int64   `json:"uptime"`
+		Wait       float64 `json:"wait"`
+		PVEVersion string  `json:"pveversion"`
+		KVersion   string  `json:"kversion"`
 	}
 
 	if err := json.Unmarshal(data, &raw); err != nil {
@@ -398,9 +399,9 @@ func parseNodeStatus(instance, nodeName string, data json.RawMessage) (*model.No
 	return node, nil
 }
 
-func parseLoadAvg(v interface{}) [3]float64 {
+func parseLoadAvg(v any) [3]float64 {
 	var result [3]float64
-	if la, ok := v.([]interface{}); ok {
+	if la, ok := v.([]any); ok {
 		for i := 0; i < 3 && i < len(la); i++ {
 			switch val := la[i].(type) {
 			case float64:
@@ -616,11 +617,11 @@ func (p *PVECollector) collectSMARTWithType(ctx context.Context, nodeName string
 	}
 
 	var smartData struct {
-		Health     string                   `json:"health"`
-		Type       string                   `json:"type"`
-		Wearout    interface{}              `json:"wearout"` // can be int or string or null
-		Attributes []map[string]interface{} `json:"attributes"`
-		Text       string                   `json:"text"` // raw smartctl output (NVMe)
+		Health     string           `json:"health"`
+		Type       string           `json:"type"`
+		Wearout    any              `json:"wearout"` // can be int or string or null
+		Attributes []map[string]any `json:"attributes"`
+		Text       string           `json:"text"` // raw smartctl output (NVMe)
 	}
 	if err := json.Unmarshal(resp.Data, &smartData); err != nil {
 		return fmt.Errorf("parsing SMART data: %w", err)
@@ -684,39 +685,51 @@ func (p *PVECollector) collectSMARTWithType(ctx context.Context, nodeName string
 		case "nvme":
 			switch a.ID {
 			case smart.NVMeTemperature:
-				t := int(a.RawValue)
+				t := safeInt(a.RawValue)
 				disk.Temperature = &t
 			case smart.NVMePowerOnHours:
-				h := int(a.RawValue)
+				h := safeInt(a.RawValue)
 				disk.PowerOnHours = &h
 			case smart.NVMePercentageUsed:
 				if disk.Wearout == nil {
-					remaining := 100 - int(a.RawValue)
+					remaining := 100 - safeInt(a.RawValue)
 					disk.Wearout = &remaining
 				}
 			}
 		default: // ata (also handles SCSI pseudo-attrs from type=scsi fallback)
 			switch a.ID {
 			case 194: // ATA Temperature_Celsius
-				t := int(a.RawValue)
+				t := safeInt(a.RawValue)
 				disk.Temperature = &t
 			case 190: // ATA Airflow_Temperature_Cel (fallback)
 				if disk.Temperature == nil {
-					t := int(a.RawValue)
+					t := safeInt(a.RawValue)
 					disk.Temperature = &t
 				}
 			case 9: // ATA Power_On_Hours
-				h := int(a.RawValue)
+				h := safeInt(a.RawValue)
 				disk.PowerOnHours = &h
 			case smart.SCSITemperature: // SCSI Current Drive Temperature
-				t := int(a.RawValue)
+				t := safeInt(a.RawValue)
 				disk.Temperature = &t
 			case smart.SCSIPowerOnHours: // SCSI power-on hours
-				h := int(a.RawValue)
+				h := safeInt(a.RawValue)
 				disk.PowerOnHours = &h
 			}
 		}
 	}
 
 	return nil
+}
+
+// safeInt converts int64 to int, clamping to the platform int range to
+// prevent silent truncation on 32-bit platforms.
+func safeInt(v int64) int {
+	if v > math.MaxInt {
+		return math.MaxInt
+	}
+	if v < math.MinInt {
+		return math.MinInt
+	}
+	return int(v)
 }

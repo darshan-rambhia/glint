@@ -179,9 +179,10 @@ func main() {
 		// Start temperature collector if SSH configured
 		if pveCfg.SSH != nil {
 			sshCfg := collector.SSHConfig{
-				Host:    pveCfg.SSH.Host,
-				User:    pveCfg.SSH.User,
-				KeyPath: pveCfg.SSH.KeyPath,
+				Host:           pveCfg.SSH.Host,
+				User:           pveCfg.SSH.User,
+				KeyPath:        pveCfg.SSH.KeyPath,
+				KnownHostsFile: pveCfg.SSH.KnownHostsFile,
 			}
 			// Temperature collector runs for the first discovered node
 			// In a real multi-node setup, we'd create one per node

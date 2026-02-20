@@ -2,6 +2,7 @@ package smart
 
 import (
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 
@@ -10,7 +11,7 @@ import (
 
 // ParseATAAttributes parses ATA SMART attributes from the PVE API response format.
 // Each entry is expected to have fields: id, name, value, worst, thresh, raw, flags, type, when_failed.
-func ParseATAAttributes(data []map[string]interface{}) ([]model.SMARTAttribute, error) {
+func ParseATAAttributes(data []map[string]any) ([]model.SMARTAttribute, error) {
 	attrs := make([]model.SMARTAttribute, 0, len(data))
 
 	for i, entry := range data {
@@ -24,14 +25,14 @@ func ParseATAAttributes(data []map[string]interface{}) ([]model.SMARTAttribute, 
 	return attrs, nil
 }
 
-func parseOneATA(entry map[string]interface{}) (model.SMARTAttribute, error) {
+func parseOneATA(entry map[string]any) (model.SMARTAttribute, error) {
 	var attr model.SMARTAttribute
 
 	id, err := toInt64(entry["id"])
 	if err != nil {
 		return attr, fmt.Errorf("parsing id: %w", err)
 	}
-	attr.ID = int(id)
+	attr.ID = safeInt(id)
 
 	if name, ok := entry["name"].(string); ok {
 		attr.Name = name
@@ -59,7 +60,7 @@ func parseOneATA(entry map[string]interface{}) (model.SMARTAttribute, error) {
 
 // parseRaw handles the raw field which can be a string (possibly with extra info)
 // or a numeric value. Returns the original string representation and the parsed numeric value.
-func parseRaw(v interface{}) (string, int64, error) {
+func parseRaw(v any) (string, int64, error) {
 	switch r := v.(type) {
 	case string:
 		return r, extractLeadingInt(r), nil
@@ -101,7 +102,19 @@ func extractLeadingInt(s string) int64 {
 }
 
 // toInt64 converts an interface{} (typically float64 from JSON) to int64.
-func toInt64(v interface{}) (int64, error) {
+// safeInt converts int64 to int, clamping to the platform int range to
+// prevent silent truncation on 32-bit platforms.
+func safeInt(v int64) int {
+	if v > math.MaxInt {
+		return math.MaxInt
+	}
+	if v < math.MinInt {
+		return math.MinInt
+	}
+	return int(v)
+}
+
+func toInt64(v any) (int64, error) {
 	switch n := v.(type) {
 	case float64:
 		return int64(n), nil

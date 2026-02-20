@@ -12,13 +12,15 @@ import (
 
 	"github.com/darshan-rambhia/glint/internal/cache"
 	"golang.org/x/crypto/ssh"
+	"golang.org/x/crypto/ssh/knownhosts"
 )
 
 // SSHConfig holds SSH connection settings for temperature polling.
 type SSHConfig struct {
-	Host    string
-	User    string
-	KeyPath string
+	Host           string
+	User           string
+	KeyPath        string
+	KnownHostsFile string // path to known_hosts file; empty = insecure (warn at startup)
 }
 
 // TempCollector polls CPU temperatures via SSH.
@@ -70,11 +72,28 @@ func (t *TempCollector) Collect(ctx context.Context) error {
 	return nil
 }
 
+func (t *TempCollector) hostKeyCallback() (ssh.HostKeyCallback, error) {
+	if t.sshCfg.KnownHostsFile == "" {
+		slog.Warn("SSH host key verification disabled — set known_hosts_file to enable it",
+			"instance", t.instance, "host", t.sshCfg.Host)
+		return ssh.InsecureIgnoreHostKey(), nil //nolint:gosec // user opted out; warned above
+	}
+	cb, err := knownhosts.New(t.sshCfg.KnownHostsFile)
+	if err != nil {
+		return nil, fmt.Errorf("loading known_hosts %s: %w", t.sshCfg.KnownHostsFile, err)
+	}
+	return cb, nil
+}
+
 func (t *TempCollector) pollTemperature(ctx context.Context) (float64, error) {
+	hkCb, err := t.hostKeyCallback()
+	if err != nil {
+		return 0, err
+	}
 	config := &ssh.ClientConfig{
 		User:            t.sshCfg.User,
 		Auth:            []ssh.AuthMethod{ssh.PublicKeys(t.signer)},
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(), //nolint:gosec // Proxmox nodes on trusted LAN; known_hosts support planned
+		HostKeyCallback: hkCb,
 		Timeout:         10 * time.Second,
 	}
 
@@ -111,7 +130,7 @@ func (t *TempCollector) pollTemperature(ctx context.Context) (float64, error) {
 
 // parseSensorsJSON extracts the highest CPU package temperature from `sensors -j` output.
 func parseSensorsJSON(data []byte) (float64, error) {
-	var sensors map[string]interface{}
+	var sensors map[string]any
 	if err := json.Unmarshal(data, &sensors); err != nil {
 		return 0, fmt.Errorf("parsing sensors JSON: %w", err)
 	}
@@ -120,7 +139,7 @@ func parseSensorsJSON(data []byte) (float64, error) {
 	var found bool
 
 	for chipName, chipData := range sensors {
-		chipMap, ok := chipData.(map[string]interface{})
+		chipMap, ok := chipData.(map[string]any)
 		if !ok {
 			continue
 		}
@@ -131,7 +150,7 @@ func parseSensorsJSON(data []byte) (float64, error) {
 		}
 
 		for _, sensorData := range chipMap {
-			sensorMap, ok := sensorData.(map[string]interface{})
+			sensorMap, ok := sensorData.(map[string]any)
 			if !ok {
 				continue
 			}

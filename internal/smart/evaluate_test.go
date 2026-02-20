@@ -18,49 +18,49 @@ func TestEvaluateAttribute(t *testing.T) {
 			name:       "critical attr ID 5, raw 0 -> passed",
 			attr:       model.SMARTAttribute{ID: 5, Value: 100, Threshold: 10, RawValue: 0},
 			wantStatus: model.StatusPassed,
-			wantRate:   float64Ptr(0.025),
+			wantRate:   new(0.025),
 		},
 		{
 			name:       "critical attr ID 5, raw 20 -> failed scrutiny (23.6%)",
 			attr:       model.SMARTAttribute{ID: 5, Value: 100, Threshold: 10, RawValue: 20},
 			wantStatus: model.StatusFailedScrutiny,
-			wantRate:   float64Ptr(0.236),
+			wantRate:   new(0.236),
 		},
 		{
 			name:       "critical attr ID 5, raw 100 -> failed scrutiny (50%)",
 			attr:       model.SMARTAttribute{ID: 5, Value: 100, Threshold: 10, RawValue: 100},
 			wantStatus: model.StatusFailedScrutiny,
-			wantRate:   float64Ptr(0.50),
+			wantRate:   new(0.50),
 		},
 		{
 			name:       "critical attr ID 197, raw 2 -> failed scrutiny (10%)",
 			attr:       model.SMARTAttribute{ID: 197, Value: 100, Threshold: 0, RawValue: 2},
 			wantStatus: model.StatusFailedScrutiny,
-			wantRate:   float64Ptr(0.10),
+			wantRate:   new(0.10),
 		},
 		{
 			name:       "critical attr ID 187, raw 5 -> passed (5% < 10%)",
 			attr:       model.SMARTAttribute{ID: 187, Value: 100, Threshold: 0, RawValue: 5},
 			wantStatus: model.StatusPassed,
-			wantRate:   float64Ptr(0.05),
+			wantRate:   new(0.05),
 		},
 		{
 			name:       "non-critical attr ID 1, raw 0 -> passed",
 			attr:       model.SMARTAttribute{ID: 1, Value: 100, Threshold: 0, RawValue: 0},
 			wantStatus: model.StatusPassed,
-			wantRate:   float64Ptr(0.02),
+			wantRate:   new(0.02),
 		},
 		{
 			name:       "non-critical attr ID 200, raw 200 -> warn scrutiny (15%)",
 			attr:       model.SMARTAttribute{ID: 200, Value: 100, Threshold: 0, RawValue: 200},
 			wantStatus: model.StatusWarnScrutiny,
-			wantRate:   float64Ptr(0.15),
+			wantRate:   new(0.15),
 		},
 		{
 			name:       "non-critical attr ID 194, raw 60 -> warn scrutiny (12%)",
 			attr:       model.SMARTAttribute{ID: 194, Value: 100, Threshold: 0, RawValue: 60},
 			wantStatus: model.StatusWarnScrutiny,
-			wantRate:   float64Ptr(0.12),
+			wantRate:   new(0.12),
 		},
 		{
 			name:       "no thresholds for unknown attr -> passed",
@@ -84,13 +84,13 @@ func TestEvaluateAttribute(t *testing.T) {
 			name:       "critical attr ID 10, raw 1 -> failed scrutiny (15%)",
 			attr:       model.SMARTAttribute{ID: 10, Value: 100, Threshold: 0, RawValue: 1},
 			wantStatus: model.StatusFailedScrutiny,
-			wantRate:   float64Ptr(0.15),
+			wantRate:   new(0.15),
 		},
 		{
 			name:       "non-critical attr ID 199, raw 50 -> passed (3% < 10%)",
 			attr:       model.SMARTAttribute{ID: 199, Value: 100, Threshold: 0, RawValue: 50},
 			wantStatus: model.StatusPassed,
-			wantRate:   float64Ptr(0.03),
+			wantRate:   new(0.03),
 		},
 	}
 
@@ -247,5 +247,3 @@ func BenchmarkEvaluateDisk(b *testing.B) {
 		EvaluateDisk(disk)
 	}
 }
-
-func float64Ptr(f float64) *float64 { return &f }

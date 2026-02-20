@@ -48,9 +48,10 @@ type PVEConfig struct {
 
 // SSHConfig describes SSH access to a PVE node.
 type SSHConfig struct {
-	Host    string `yaml:"host"`
-	User    string `yaml:"user"`
-	KeyPath string `yaml:"key_path"`
+	Host           string `yaml:"host"`
+	User           string `yaml:"user"`
+	KeyPath        string `yaml:"key_path"`
+	KnownHostsFile string `yaml:"known_hosts_file,omitempty"`
 }
 
 // PBSConfig describes a single Proxmox Backup Server instance.
@@ -125,7 +126,7 @@ func (d *Duration) UnmarshalYAML(value *yaml.Node) error {
 	return nil
 }
 
-func (d Duration) MarshalYAML() (interface{}, error) {
+func (d Duration) MarshalYAML() (any, error) {
 	return d.String(), nil
 }
 
