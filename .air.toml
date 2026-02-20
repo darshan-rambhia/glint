@@ -1,0 +1,42 @@
+root = "."
+tmp_dir = "tmp"
+
+[build]
+  # Regenerate templ templates before every build.  The generated *_templ.go
+  # files are excluded from the file-watcher (see exclude_regex) so they don't
+  # trigger an extra rebuild cycle after templ writes them.
+  pre_cmd  = ["templ generate"]
+  cmd        = "CGO_ENABLED=1 go build -o ./tmp/main ./cmd/glint"
+  entrypoint = ["./tmp/main", "--config", "glint.yml"]
+
+  include_ext = ["go", "templ", "html"]
+  exclude_dir = ["tmp", "bin", "vendor", "docs", "scripts", "target"]
+
+  # Ignore generated templ output and test files — they don't need to retrigger
+  # a build on their own.
+  exclude_regex = ["_templ\\.go$", "_test\\.go$"]
+
+  # Debounce: wait 500 ms after the last file-change before rebuilding.
+  delay = 500
+
+  # Send SIGTERM so glint can shut down gracefully, then wait up to 10 s
+  # before escalating to SIGKILL.
+  send_interrupt = true
+  kill_delay     = "10s"
+
+  # Show build output even on success.
+  log = "build-errors.log"
+
+[log]
+  time      = true
+  main_only = false
+
+[color]
+  main    = "magenta"
+  watcher = "cyan"
+  build   = "yellow"
+  runner  = "green"
+
+[misc]
+  # Remove the tmp binary when air exits.
+  clean_on_exit = true

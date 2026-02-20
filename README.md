@@ -11,12 +11,15 @@ Lightweight Proxmox monitoring dashboard. Single binary, ~10MB, ~30-50MB RAM.
 
 **Go + templ + htmx** — server-rendered HTML with 15-second live polling. SQLite for history. No JavaScript build step.
 
-<!-- TODO: Replace with actual screenshot -->
-<p align="center">
-  <img src="docs/assets/screenshot-placeholder.png" alt="Glint Dashboard" width="800">
-  <br>
-  <em>Dashboard screenshot coming soon</em>
-</p>
+<details open>
+<summary>☀ Light</summary>
+<img src="docs/assets/screenshot.png" alt="Glint Dashboard — light theme" width="800">
+</details>
+
+<details>
+<summary>☾ Dark</summary>
+<img src="docs/assets/screenshot-dark.png" alt="Glint Dashboard — dark theme" width="800">
+</details>
 
 ## Features
 
@@ -71,6 +74,15 @@ Full documentation is available at **[darshan-rambhia.github.io/glint](https://d
 | [Architecture](https://darshan-rambhia.github.io/glint/architecture/) | How Glint works — collectors, cache, store, alerter |
 | [API Reference](https://darshan-rambhia.github.io/glint/api/) | OpenAPI spec, JSON API, htmx fragment endpoints |
 | [Testing](https://darshan-rambhia.github.io/glint/testing/) | Unit tests, benchmarks, fuzz tests, coverage, linting |
+
+## Security
+
+Glint has **no built-in authentication**. It is designed for trusted home networks where the monitoring port is not internet-accessible.
+
+- **Do not expose port 3800 to the internet** without a reverse proxy with authentication (Caddy, nginx, Authelia, etc.)
+- For any non-LAN deployment, bind Glint to `127.0.0.1` and put it behind an authenticated reverse proxy
+- API tokens for PVE/PBS are stored in your config file — protect it with `chmod 600 glint.yml`
+- Setting `insecure: true` disables TLS certificate verification and logs a startup warning
 
 ## Inspiration
 

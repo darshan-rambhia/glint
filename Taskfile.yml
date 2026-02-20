@@ -12,11 +12,10 @@ tasks:
     cmds:
       - CGO_ENABLED=1 go build -ldflags="-s -w" -o bin/glint ./cmd/glint
 
-  run:
-    desc: Run glint locally
-    deps: [generate]
+  dev:
+    desc: Run glint with hot-reload (requires air — go install github.com/air-verse/air@latest)
     cmds:
-      - go run ./cmd/glint --config glint.yml
+      - air
 
   test:
     desc: Run tests with race detector, coverage tracking, and threshold enforcement

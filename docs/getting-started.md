@@ -50,18 +50,30 @@ SSH into your PBS host:
 # Create a dedicated user
 proxmox-backup-manager user create glint@pbs --comment "Glint monitoring"
 
-# Assign the Audit role (read-only)
+# Assign the Audit role to the user
 proxmox-backup-manager acl update / Audit --auth-id glint@pbs
 
 # Create an API token
 proxmox-backup-manager user generate-token glint@pbs monitor
 ```
 
+!!! warning "Token ACL required"
+    PBS API tokens have privilege separation by default — the token needs its own ACL entry,
+    separate from the user. Without this step, all API calls will return `403 Forbidden`.
+
+```bash
+# Grant the DatastoreAudit role to the token itself (not just the user)
+proxmox-backup-manager acl update /datastore DatastoreAudit --auth-id 'glint@pbs!monitor' --propagate true
+```
+
 Verify with:
 
 ```bash
+# Check the ACL was applied
+proxmox-backup-manager acl list | grep glint
+
 curl -k -H "Authorization: PBSAPIToken=glint@pbs!monitor:YOUR_SECRET" \
-  https://YOUR_PBS_IP:8007/api2/json/status/datastore-usage
+  https://YOUR_PBS_IP:8007/api2/json/admin/datastore/YOUR_DATASTORE/status
 ```
 
 ---
@@ -189,8 +201,12 @@ curl http://localhost:3800/healthz
 After starting Glint:
 
 1. **Health check:** `curl http://localhost:3800/healthz`
-2. **Dashboard:** Open `http://localhost:3800` in your browser
+2. **Dashboard:** Open `http://localhost:3800` in your browser — you should see sections for Nodes, Disk health, Guests, Backups, and Events
 3. **Logs:** Check for collector startup messages --- you should see `PVE collection complete` within 15 seconds
+
+!!! note "Disk health and Events may be slow to populate"
+    **Disk health** data is polled on `disk_poll_interval` (default: 1 hour). Expect the Disk health section to be populated on the next poll.
+    **Events** (PBS task history) shows server-initiated tasks only — verification, prune, garbage collection, and sync jobs. Client-initiated backups run via `proxmox-backup-client` do not create server-side tasks and will not appear here.
 
 ---
 
@@ -199,13 +215,30 @@ After starting Glint:
 | Issue | Solution |
 |-------|----------|
 | `401 Unauthorized` | Token ID or secret is wrong. Format: `user@realm!tokenname` |
-| `403 Forbidden` | Token lacks permissions. Re-run `pveum aclmod / -user glint@pam -role PVEAuditor` |
+| `403 Forbidden` (PVE) | Token lacks permissions. Re-run `pveum aclmod / -user glint@pam -role PVEAuditor` |
+| `403 Forbidden` (PBS) | Token ACL missing. Run `proxmox-backup-manager acl update /datastore DatastoreAudit --auth-id 'glint@pbs!monitor' --propagate true` |
 | `Connection refused` | PVE/PBS host unreachable. Check network, firewall, and port (8006/8007) |
 | `TLS handshake error` | Set `insecure: true` for self-signed certificates |
 | `No nodes found` | Token may not have permissions on `/nodes`. Re-assign PVEAuditor on `/` |
 | `No disks found` | SMART data is polled hourly. Wait up to 1 hour for initial disk data |
+| `Events section is empty` | Normal if no PBS server-side jobs ran in the last 7 days. Client-initiated backups do not appear here. |
 | `No data on dashboard` | Check logs for collector errors. Verify API tokens with `curl` (see step 1) |
 | Container won't start | Check `docker compose logs glint`. Common: invalid YAML, missing required fields |
+
+---
+
+## Security Notes
+
+!!! warning "No built-in authentication"
+    Glint has no built-in authentication. **Do not expose port 3800 to the internet.**
+
+    For any deployment where the port may be reachable beyond your trusted LAN:
+
+    - Bind to `127.0.0.1` in your config: `listen: "127.0.0.1:3800"`
+    - Reverse-proxy behind Caddy, nginx, or similar with authentication
+    - Restrict access at the firewall or VLAN level
+
+    The dashboard displays host names, guest names, disk models, and backup state — information that should not be publicly accessible.
 
 ---
 

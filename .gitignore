@@ -2,6 +2,7 @@
 bin/
 dist/
 target/
+tmp/
 *.db
 *_templ.go
 glint.yml
