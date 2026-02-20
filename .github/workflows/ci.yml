@@ -59,4 +59,4 @@ jobs:
       - name: Generate templates
         run: templ generate
       - name: Build
-        run: CGO_ENABLED=1 go build -ldflags="-s -w" -o bin/glint ./cmd/glint
+        run: go build -ldflags="-s -w" -o bin/glint ./cmd/glint

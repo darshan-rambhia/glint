@@ -10,7 +10,7 @@ tasks:
     desc: Build the glint binary
     deps: [generate]
     cmds:
-      - CGO_ENABLED=1 go build -ldflags="-s -w" -o bin/glint ./cmd/glint
+      - go build -ldflags="-s -w" -o bin/glint ./cmd/glint
 
   dev:
     desc: Run glint with hot-reload (requires air — go install github.com/air-verse/air@latest)

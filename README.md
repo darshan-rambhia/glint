@@ -56,8 +56,8 @@ glint --config glint.yml
 ```
 
 ```bash
-# Or install with Go (requires Go 1.26+ and CGO)
-CGO_ENABLED=1 go install github.com/darshan-rambhia/glint/cmd/glint@latest
+# Or install with Go (requires Go 1.26+)
+go install github.com/darshan-rambhia/glint/cmd/glint@latest
 glint --config glint.yml
 ```
 
