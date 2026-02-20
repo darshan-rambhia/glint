@@ -22,9 +22,20 @@ jobs:
       - name: Generate templates
         run: templ generate
       - name: golangci-lint
+        id: lint
         uses: golangci/golangci-lint-action@v7
         with:
           version: v2.9.0
+      - name: Job summary
+        if: always()
+        run: |
+          if [ "${{ steps.lint.outcome }}" = "success" ]; then
+            echo "## ✅ Lint passed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "## ❌ Lint failed" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Check the **golangci-lint** step output above for the full list of issues." >> $GITHUB_STEP_SUMMARY
+          fi
 
   test:
     runs-on: ubuntu-latest
@@ -38,6 +49,7 @@ jobs:
       - name: Generate templates
         run: templ generate
       - name: Run tests with coverage
+        id: test
         run: go run ./scripts/coverage
       - name: Upload coverage report
         if: always()
@@ -45,6 +57,36 @@ jobs:
         with:
           name: coverage-report
           path: target/reports/
+      - name: Job summary
+        if: always()
+        run: |
+          if [ "${{ steps.test.outcome }}" = "success" ]; then
+            echo "## ✅ Tests passed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "## ❌ Tests failed" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          if [ -f target/reports/coverage-filtered.out ]; then
+            TOTAL=$(go tool cover -func=target/reports/coverage-filtered.out \
+              | grep "^total:" | awk '{print $3}')
+            THRESHOLD=$(cat scripts/coverage/coverage_required.txt | tr -d '[:space:]')
+
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "| | |" >> $GITHUB_STEP_SUMMARY
+            echo "|---|---|" >> $GITHUB_STEP_SUMMARY
+            echo "| Coverage | \`${TOTAL}\` |" >> $GITHUB_STEP_SUMMARY
+            echo "| Threshold | \`${THRESHOLD}%\` |" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "<details><summary>Per-package breakdown</summary>" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            printf '```\n' >> $GITHUB_STEP_SUMMARY
+            go tool cover -func=target/reports/coverage-filtered.out >> $GITHUB_STEP_SUMMARY
+            printf '```\n' >> $GITHUB_STEP_SUMMARY
+            echo "</details>" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "_Coverage profile not available — tests may have failed before completing._" >> $GITHUB_STEP_SUMMARY
+          fi
 
   bench:
     runs-on: ubuntu-latest
@@ -58,6 +100,7 @@ jobs:
       - name: Generate templates
         run: templ generate
       - name: Run benchmarks (smoke — 1 iteration each)
+        id: bench
         run: BENCH_TIME=1x go run ./scripts/bench
       - name: Upload benchmark report
         if: always()
@@ -65,6 +108,24 @@ jobs:
         with:
           name: bench-report
           path: target/reports/bench.txt
+      - name: Job summary
+        if: always()
+        run: |
+          if [ "${{ steps.bench.outcome }}" = "success" ]; then
+            echo "## ✅ Benchmarks passed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "## ❌ Benchmarks failed" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          if [ -f target/reports/bench.txt ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            printf '```\n' >> $GITHUB_STEP_SUMMARY
+            cat target/reports/bench.txt >> $GITHUB_STEP_SUMMARY
+            printf '```\n' >> $GITHUB_STEP_SUMMARY
+          else
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "_Benchmark report not available — runner may have failed before writing the report._" >> $GITHUB_STEP_SUMMARY
+          fi
 
   fuzz:
     runs-on: ubuntu-latest
@@ -78,6 +139,7 @@ jobs:
       - name: Generate templates
         run: templ generate
       - name: Fuzz (5s per target)
+        id: fuzz
         run: FUZZ_TIME=5s go run ./scripts/fuzz
       - name: Upload fuzz report
         if: always()
@@ -85,6 +147,27 @@ jobs:
         with:
           name: fuzz-report
           path: target/reports/fuzz.txt
+      - name: Job summary
+        if: always()
+        run: |
+          if [ "${{ steps.fuzz.outcome }}" = "success" ]; then
+            echo "## ✅ Fuzz testing passed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "## ❌ Fuzz testing found a failure" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "A failing corpus input was written. Check the **fuzz** step output" >> $GITHUB_STEP_SUMMARY
+            echo "above and the uploaded **fuzz-report** artifact for details." >> $GITHUB_STEP_SUMMARY
+          fi
+
+          if [ -f target/reports/fuzz.txt ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            printf '```\n' >> $GITHUB_STEP_SUMMARY
+            cat target/reports/fuzz.txt >> $GITHUB_STEP_SUMMARY
+            printf '```\n' >> $GITHUB_STEP_SUMMARY
+          else
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "_Fuzz report not available — runner may have failed before writing the report._" >> $GITHUB_STEP_SUMMARY
+          fi
 
   build:
     runs-on: ubuntu-latest
@@ -99,4 +182,20 @@ jobs:
       - name: Generate templates
         run: templ generate
       - name: Build
+        id: build
         run: go build -ldflags="-s -w" -o bin/glint ./cmd/glint
+      - name: Job summary
+        if: always()
+        run: |
+          if [ "${{ steps.build.outcome }}" = "success" ]; then
+            SIZE=$(du -sh bin/glint | cut -f1)
+            echo "## ✅ Build passed" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "| Binary | Size |" >> $GITHUB_STEP_SUMMARY
+            echo "|---|---|" >> $GITHUB_STEP_SUMMARY
+            echo "| \`bin/glint\` | ${SIZE} |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "## ❌ Build failed" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Check the **Build** step output above for the compiler error." >> $GITHUB_STEP_SUMMARY
+          fi
