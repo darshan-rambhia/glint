@@ -90,6 +90,42 @@ at all.
 	assert.Error(t, err)
 }
 
+func FuzzParseNVMeText(f *testing.F) {
+	// Full standard output — all 10 known fields, covering every lookup and all
+	// parseNVMeValue format branches (hex, comma-number, percent, "N Celsius", plain).
+	f.Add(nvmeSmartctlOutput)
+	// Hex critical warning — emphasises the 0x... branch of parseNVMeValue.
+	f.Add("Critical Warning:                   0x0004\nTemperature:                        40 Celsius\nAvailable Spare:                    80%\nAvailable Spare Threshold:          10%\nPercentage Used:                    15%\nData Units Read:                    500\nData Units Written:                 1000\nPower On Hours:                     2000\nMedia and Data Integrity Errors:    5\nError Information Log Entries:      10\n")
+	// Partial output — only 3 known fields; succeeds (attrs > 0).
+	f.Add("Temperature:                        38 Celsius\nPercentage Used:                    5%\nMedia and Data Integrity Errors:    0\n")
+	// Single known field — minimal valid input.
+	f.Add("Temperature:                        35 Celsius\n")
+	// Lines without colons — all skipped by strings.Cut; returns error (no attrs).
+	f.Add("=== START OF SMART DATA SECTION ===\nSMART/Health Information (NVMe Log 0x02)\nno colon here\n")
+	// Only unknown field names (fields smartctl emits but ParseNVMeText ignores);
+	// every line has a colon but none match nvmeFieldMap — returns error.
+	f.Add("Host Read Commands:                 234,567,890\nHost Write Commands:                123,456,789\nController Busy Time:               1,234\nPower Cycles:                       42\n")
+	// Empty string — returns error.
+	f.Add("")
+	// Mixed: known fields interleaved with irrelevant lines and no-colon headers.
+	f.Add("=== START OF SMART DATA SECTION ===\nTemperature:                        42 Celsius\nsome irrelevant line\nMedia and Data Integrity Errors:    0\n")
+	f.Fuzz(func(t *testing.T, s string) {
+		attrs, err := ParseNVMeText(s)
+		if err != nil {
+			return
+		}
+		// A nil error guarantees at least one attribute was found.
+		if len(attrs) == 0 {
+			t.Fatal("ParseNVMeText returned no error but empty attrs slice")
+		}
+		for _, a := range attrs {
+			if a.ID < NVMeCriticalWarning || a.ID > NVMeNumErrLogEntries {
+				t.Fatalf("attr ID %d out of NVMe range [%d, %d]", a.ID, NVMeCriticalWarning, NVMeNumErrLogEntries)
+			}
+		}
+	})
+}
+
 func TestParseNVMeValue(t *testing.T) {
 	tests := []struct {
 		input   string

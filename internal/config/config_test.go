@@ -470,6 +470,17 @@ func TestLoad_PBSValidation_MissingTokenSecret(t *testing.T) {
 	assert.Contains(t, err.Error(), "pbs[0]: token_secret is required")
 }
 
+func FuzzExpandEnvVars(f *testing.F) {
+	f.Add([]byte(`listen: ":3800"`))
+	f.Add([]byte(`token_secret: "${MY_SECRET}"`))
+	f.Add([]byte(`${} ${VAR} $VAR`))
+	f.Add([]byte(`pve_secret: "${A}${B}"`))
+	f.Fuzz(func(t *testing.T, data []byte) {
+		// Must not panic
+		_ = expandEnvVars(data)
+	})
+}
+
 // validConfig returns a minimal valid Config for mutation in tests.
 func validConfig() *Config {
 	return &Config{

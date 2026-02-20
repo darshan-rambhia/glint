@@ -199,15 +199,13 @@ func TestConcurrentReadWrite(t *testing.T) {
 
 	// Readers
 	for range 10 {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			snap := c.Snapshot()
 			// Just access fields to trigger any race.
 			_ = len(snap.Nodes)
 			_ = len(snap.Guests)
 			_ = len(snap.LastPoll)
-		}()
+		})
 	}
 
 	wg.Wait()

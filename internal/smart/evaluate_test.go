@@ -1,6 +1,7 @@
 package smart
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/darshan-rambhia/glint/internal/model"
@@ -222,6 +223,56 @@ func TestEvaluateAttribute_NonCriticalFailedScrutiny(t *testing.T) {
 	assert.Equal(t, model.StatusFailedScrutiny, status)
 	assert.NotNil(t, attr.FailureRate)
 	assert.InDelta(t, 0.25, *attr.FailureRate, 0.001)
+}
+
+func BenchmarkEvaluateAttribute(b *testing.B) {
+	attrs := []model.SMARTAttribute{
+		{ID: 5, Value: 100, Threshold: 10, RawValue: 0},
+		{ID: 197, Value: 100, Threshold: 0, RawValue: 0},
+		{ID: 194, Value: 68, Threshold: 0, RawValue: 32},
+		{ID: 187, Value: 100, Threshold: 0, RawValue: 0},
+		{ID: 199, Value: 200, Threshold: 0, RawValue: 50},
+	}
+	b.ResetTimer()
+	for b.Loop() {
+		for i := range attrs {
+			a := attrs[i]
+			EvaluateAttribute(&a, "ata")
+		}
+	}
+}
+
+func FuzzParseATAAttributes(f *testing.F) {
+	// String raw with all optional fields present.
+	f.Add(`[{"id":5,"name":"Reallocated_Sector_Ct","value":100,"worst":100,"thresh":10,"raw":"0","flags":"0x0034"}]`)
+	// Empty list.
+	f.Add(`[]`)
+	// float64 raw (JSON number) — minimal attribute.
+	f.Add(`[{"id":1,"value":100,"worst":100,"thresh":0,"raw":0}]`)
+	// String raw with trailing annotation — exercises extractLeadingInt("40 (Min/Max 25/55)").
+	f.Add(`[{"id":194,"name":"Temperature_Celsius","value":68,"worst":55,"thresh":0,"raw":"40 (Min/Max 25/55)","flags":"-O---K","type":"old_age","when_failed":""}]`)
+	// Float64 raw from JSON — exercises the float64 branch of parseRaw.
+	f.Add(`[{"id":9,"name":"Power_On_Hours","value":97,"worst":97,"thresh":0,"raw":25000,"flags":"-O--CK","type":"old_age","when_failed":""}]`)
+	// Null raw — exercises the nil branch of parseRaw.
+	f.Add(`[{"id":1,"name":"Raw_Read_Error_Rate","value":100,"worst":100,"thresh":6,"raw":null}]`)
+	// Missing id field — exercises the error return from toInt64.
+	f.Add(`[{"name":"no_id","value":100,"raw":"0"}]`)
+	// Two attributes with different raw types — exercises the full iteration path.
+	f.Add(`[{"id":5,"name":"Reallocated_Sector_Ct","value":100,"worst":100,"thresh":10,"raw":"0"},{"id":197,"name":"Current_Pending_Sector","value":100,"worst":100,"thresh":0,"raw":2}]`)
+	f.Fuzz(func(t *testing.T, s string) {
+		var data []map[string]any
+		if err := json.Unmarshal([]byte(s), &data); err != nil {
+			return
+		}
+		attrs, err := ParseATAAttributes(data)
+		if err != nil {
+			return
+		}
+		// On success, every input entry must produce exactly one output attribute.
+		if len(attrs) != len(data) {
+			t.Fatalf("len(attrs)=%d != len(data)=%d", len(attrs), len(data))
+		}
+	})
 }
 
 func BenchmarkEvaluateDisk(b *testing.B) {

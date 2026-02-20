@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func newTestStore(t *testing.T) *Store {
+func newTestStore(t testing.TB) *Store {
 	t.Helper()
 	dir := t.TempDir()
 	s, err := New(filepath.Join(dir, "test.db"))
@@ -102,7 +102,7 @@ func TestQueryNodeSparkline(t *testing.T) {
 	now := time.Now().Unix()
 
 	// Insert a few snapshots
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		err := s.InsertNodeSnapshot(model.NodeSnapshot{
 			Timestamp:  now - int64((4-i)*60),
 			Instance:   "main",
@@ -225,7 +225,7 @@ func TestQueryGuestSparkline(t *testing.T) {
 	now := time.Now().Unix()
 
 	// Insert guest snapshots
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		err := s.InsertGuestSnapshot(model.GuestSnapshot{
 			Timestamp: now - int64((4-i)*60),
 			Instance:  "main",
@@ -326,7 +326,7 @@ func TestQueryNodeSparkline_Memory(t *testing.T) {
 // Error paths: closed DB triggers all error returns
 // ---------------------------------------------------------------------------
 
-func closedTestStore(t *testing.T) *Store {
+func closedTestStore(t testing.TB) *Store {
 	t.Helper()
 	s := newTestStore(t)
 	s.Close()
@@ -434,6 +434,67 @@ func TestUpsertPBSInstance_Upsert(t *testing.T) {
 	// Upsert again to cover ON CONFLICT path.
 	err = s.UpsertPBSInstance("pbs1", "https://10.100.1.103:8007")
 	assert.NoError(t, err)
+}
+
+// ---------------------------------------------------------------------------
+// Benchmarks
+// ---------------------------------------------------------------------------
+
+func BenchmarkQueryNodeSparkline(b *testing.B) {
+	s := newTestStore(b)
+	now := time.Now().Unix()
+	for i := range 50 {
+		_ = s.InsertNodeSnapshot(model.NodeSnapshot{
+			Timestamp:  now - int64((50-i)*60),
+			Instance:   "main",
+			Node:       "pve",
+			CPUPct:     float64(20 + (i % 80)),
+			MemUsed:    8_000_000_000,
+			MemTotal:   16_000_000_000,
+			SwapUsed:   0,
+			SwapTotal:  4_000_000_000,
+			RootUsed:   20_000_000_000,
+			RootTotal:  100_000_000_000,
+			Load1m:     1.0,
+			Load5m:     0.8,
+			Load15m:    0.6,
+			IOWait:     0.1,
+			UptimeSecs: 100000,
+		})
+	}
+	b.ResetTimer()
+	for b.Loop() {
+		_, _ = s.QueryNodeSparkline("main", "pve", "cpu", now-3600)
+	}
+}
+
+func BenchmarkQueryGuestSparkline(b *testing.B) {
+	s := newTestStore(b)
+	now := time.Now().Unix()
+	for i := range 50 {
+		_ = s.InsertGuestSnapshot(model.GuestSnapshot{
+			Timestamp: now - int64((50-i)*60),
+			Instance:  "main",
+			VMID:      101,
+			Node:      "pve",
+			ClusterID: "main",
+			GuestType: "lxc",
+			Name:      "test",
+			Status:    "running",
+			CPUPct:    float64(5 + (i % 30)),
+			CPUs:      2,
+			MemUsed:   312_000_000,
+			MemTotal:  2_048_000_000,
+			DiskUsed:  1_200_000_000,
+			DiskTotal: 8_000_000_000,
+			NetIn:     1_000_000,
+			NetOut:    500_000,
+		})
+	}
+	b.ResetTimer()
+	for b.Loop() {
+		_, _ = s.QueryGuestSparkline("main", 101, now-3600)
+	}
 }
 
 func TestNew_WritesToDisk(t *testing.T) {

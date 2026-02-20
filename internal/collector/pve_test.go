@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"testing"
 	"time"
 
@@ -215,7 +216,7 @@ func TestParseNodeStatus_InvalidJSON(t *testing.T) {
 func TestParseLoadAvg(t *testing.T) {
 	tests := []struct {
 		name     string
-		input    interface{}
+		input    any
 		expected [3]float64
 	}{
 		{
@@ -225,27 +226,27 @@ func TestParseLoadAvg(t *testing.T) {
 		},
 		{
 			name:     "empty array",
-			input:    []interface{}{},
+			input:    []any{},
 			expected: [3]float64{0, 0, 0},
 		},
 		{
 			name:     "string values",
-			input:    []interface{}{"1.23", "0.45", "0.67"},
+			input:    []any{"1.23", "0.45", "0.67"},
 			expected: [3]float64{1.23, 0.45, 0.67},
 		},
 		{
 			name:     "float values",
-			input:    []interface{}{1.23, 0.45, 0.67},
+			input:    []any{1.23, 0.45, 0.67},
 			expected: [3]float64{1.23, 0.45, 0.67},
 		},
 		{
 			name:     "mixed string and float",
-			input:    []interface{}{"0.50", 1.0, "2.5"},
+			input:    []any{"0.50", 1.0, "2.5"},
 			expected: [3]float64{0.50, 1.0, 2.5},
 		},
 		{
 			name:     "only two values",
-			input:    []interface{}{1.0, 2.0},
+			input:    []any{1.0, 2.0},
 			expected: [3]float64{1.0, 2.0, 0},
 		},
 	}
@@ -299,7 +300,7 @@ func TestPVE_apiGet_AuthHeader(t *testing.T) {
 	})
 	coll, _, _, _ := newTestPVECollector(t, handler)
 
-	_, err := coll.apiGet(context.Background(), "/api2/json/nodes")
+	_, err := coll.apiGet(context.Background(), "test", "/api2/json/nodes")
 	require.NoError(t, err)
 	assert.Equal(t, "PVEAPIToken=root@pam!monitor=aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee", gotAuth)
 }
@@ -322,7 +323,7 @@ func TestPVE_apiGet_ErrorResponse(t *testing.T) {
 			})
 			coll, _, _, _ := newTestPVECollector(t, handler)
 
-			_, err := coll.apiGet(context.Background(), "/test")
+			_, err := coll.apiGet(context.Background(), "test", "/test")
 			require.Error(t, err)
 
 			var apiErr *APIError
@@ -885,7 +886,7 @@ func TestPVE_apiGet_RetryableOnNetworkError(t *testing.T) {
 	cfg := PVEConfig{Name: "test", Host: ts.URL, TokenID: "t", TokenSecret: "s", PollInterval: 30 * time.Second, DiskPollInterval: 5 * time.Minute}
 	coll := NewPVECollector(cfg, pool, c, s)
 
-	_, err = coll.apiGet(context.Background(), "/test")
+	_, err = coll.apiGet(context.Background(), "test", "/test")
 	require.Error(t, err)
 	var re *RetryableError
 	assert.ErrorAs(t, err, &re)
@@ -991,7 +992,7 @@ func TestPVEApiGet_CancelledContext(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel() // cancel immediately
 
-	_, err := coll.apiGet(ctx, "/api2/json/nodes")
+	_, err := coll.apiGet(ctx, "test", "/api2/json/nodes")
 	assert.Error(t, err)
 }
 
@@ -1001,10 +1002,127 @@ func TestPVEApiGet_Non200Status(t *testing.T) {
 	})
 	coll, _, _, _ := newTestPVECollector(t, handler)
 
-	_, err := coll.apiGet(context.Background(), "/api2/json/nodes")
+	_, err := coll.apiGet(context.Background(), "test", "/api2/json/nodes")
 	assert.Error(t, err)
 
 	var apiErr *APIError
 	assert.ErrorAs(t, err, &apiErr)
 	assert.Equal(t, http.StatusForbidden, apiErr.StatusCode)
+}
+
+// ---------------------------------------------------------------------------
+// Fuzz tests — PVE response parsing
+// ---------------------------------------------------------------------------
+
+// FuzzParseNodeStatus exercises the full node status parser with arbitrary
+// JSON. The primary risk is the polymorphic loadavg field ([]string vs
+// []float64 vs null) and unexpected memory/CPU value types.
+func FuzzParseNodeStatus(f *testing.F) {
+	// string loadavg — the common PVE 7/8 format
+	f.Add([]byte(`{"cpu":0.04,"cpuinfo":{"model":"Intel i7","cores":8,"cpus":16,"sockets":1},"memory":{"used":8589934592,"total":34359738368},"swap":{"used":0,"total":8589934592},"rootfs":{"used":21474836480,"total":107374182400},"loadavg":["0.42","0.38","0.35"],"uptime":1234567,"wait":0.001,"pveversion":"8.2.4","kversion":"Linux 6.8.4"}`))
+	// float loadavg — seen on some older PVE builds
+	f.Add([]byte(`{"cpu":0.15,"loadavg":[0.10,0.20,0.30],"memory":{"used":1024,"total":4096},"swap":{"used":0,"total":0},"rootfs":{"used":100,"total":1000},"uptime":3600}`))
+	// null loadavg
+	f.Add([]byte(`{"cpu":0,"loadavg":null,"memory":{"used":0,"total":0},"swap":{"used":0,"total":0},"rootfs":{"used":0,"total":0}}`))
+	// mixed element types in loadavg array
+	f.Add([]byte(`{"cpu":0,"loadavg":["0.5",1.0,null]}`))
+	// empty object
+	f.Add([]byte(`{}`))
+
+	f.Fuzz(func(t *testing.T, data []byte) {
+		// Must never panic regardless of input shape.
+		parseNodeStatus("fuzz-instance", "fuzz-node", json.RawMessage(data))
+	})
+}
+
+// FuzzParseLoadAvg directly targets the polymorphic loadavg conversion, which
+// must handle []string, []float64, []any (mixed), null, and non-array values
+// without panicking.
+func FuzzParseLoadAvg(f *testing.F) {
+	f.Add([]byte(`["0.42","0.38","0.35"]`)) // string array
+	f.Add([]byte(`[0.10,0.20,0.30]`))       // float array
+	f.Add([]byte(`["0.5",1.0,null]`))        // mixed
+	f.Add([]byte(`[]`))                      // empty
+	f.Add([]byte(`[0.5]`))                   // too short
+	f.Add([]byte(`"0.5"`))                   // scalar string
+	f.Add([]byte(`null`))
+	f.Add([]byte(`0.5`))
+
+	f.Fuzz(func(t *testing.T, data []byte) {
+		var v any
+		if err := json.Unmarshal(data, &v); err != nil {
+			return // invalid JSON is rejected upstream before reaching parseLoadAvg
+		}
+		parseLoadAvg(v)
+	})
+}
+
+// FuzzParseSMARTResponse exercises the SMART data JSON unmarshal and the
+// wearout type switch (float64 / string / null / other). This mirrors the
+// inline parsing in collectSMARTWithType.
+func FuzzParseSMARTResponse(f *testing.F) {
+	f.Add([]byte(`{"health":"PASSED","type":"ata","wearout":90,"attributes":[],"text":""}`))
+	f.Add([]byte(`{"health":"PASSED","type":"ata","wearout":"85","attributes":[]}`))          // wearout as string
+	f.Add([]byte(`{"health":"PASSED","type":"nvme","wearout":null,"text":"Temp: 40 C"}`))     // null wearout
+	f.Add([]byte(`{"health":"FAILED","type":"ata","wearout":90.7,"attributes":[]}`))          // fractional wearout
+	f.Add([]byte(`{"health":"UNKNOWN","type":"scsi","wearout":true}`))                        // unexpected wearout type
+	f.Add([]byte(`{"health":"PASSED","type":"ata","wearout":[]}`))                            // array wearout
+	f.Add([]byte(`{}`))
+
+	f.Fuzz(func(t *testing.T, data []byte) {
+		var smartData struct {
+			Health     string           `json:"health"`
+			Type       string           `json:"type"`
+			Wearout    any              `json:"wearout"` // can be float64, string, null, or other
+			Attributes []map[string]any `json:"attributes"`
+			Text       string           `json:"text"`
+		}
+		if err := json.Unmarshal(data, &smartData); err != nil {
+			return
+		}
+		// Mirror wearout parsing from collectSMARTWithType — must never panic.
+		if smartData.Wearout != nil {
+			switch w := smartData.Wearout.(type) {
+			case float64:
+				_ = int(w)
+			case string:
+				_, _ = strconv.Atoi(w)
+			}
+		}
+		// Confirm attributes slice is safely iterable.
+		for _, attr := range smartData.Attributes {
+			_ = attr
+		}
+	})
+}
+
+// FuzzParseGuestList exercises the guest list unmarshal used in
+// collectGuestType. Mirrors the anonymous struct exactly to catch cases where
+// PVE returns unexpected field types (e.g. VMID as string).
+func FuzzParseGuestList(f *testing.F) {
+	f.Add([]byte(`[{"vmid":100,"name":"vm-alpine","status":"running","cpu":0.05,"cpus":2,"mem":2147483648,"maxmem":4294967296,"disk":0,"maxdisk":32212254720,"netin":12345,"netout":67890,"uptime":7200}]`))
+	f.Add([]byte(`[{"vmid":200,"name":"ct-web","status":"running","cpu":0.01,"cpus":1,"mem":524288000,"maxmem":1073741824,"disk":1073741824,"maxdisk":10737418240,"netin":0,"netout":0,"uptime":3600}]`))
+	f.Add([]byte(`[{"vmid":101,"name":"vm-stopped","status":"stopped","cpu":0,"cpus":4,"mem":0,"maxmem":8589934592,"uptime":0}]`))
+	f.Add([]byte(`[]`))
+	f.Add([]byte(`{}`))
+
+	f.Fuzz(func(t *testing.T, data []byte) {
+		// Mirrors the anonymous struct in collectGuestType exactly.
+		var rawGuests []struct {
+			VMID    int     `json:"vmid"`
+			Name    string  `json:"name"`
+			Status  string  `json:"status"`
+			CPU     float64 `json:"cpu"`
+			CPUs    int     `json:"cpus"`
+			Mem     int64   `json:"mem"`
+			MaxMem  int64   `json:"maxmem"`
+			Disk    int64   `json:"disk"`
+			MaxDisk int64   `json:"maxdisk"`
+			NetIn   int64   `json:"netin"`
+			NetOut  int64   `json:"netout"`
+			Uptime  int64   `json:"uptime"`
+		}
+		//nolint:errcheck
+		json.Unmarshal(data, &rawGuests)
+	})
 }

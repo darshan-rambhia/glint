@@ -2,6 +2,7 @@ package collector
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -142,7 +143,7 @@ func TestPBS_apiGet_AuthHeader(t *testing.T) {
 	})
 	coll, _, _, _ := newTestPBSCollector(t, handler)
 
-	_, err := coll.apiGet(context.Background(), "/api2/json/status/datastore-usage")
+	_, err := coll.apiGet(context.Background(), "test", "/api2/json/status/datastore-usage")
 	require.NoError(t, err)
 	// PBS uses PBSAPIToken with colon separator (not = like PVE)
 	assert.Equal(t, "PBSAPIToken=backup@pbs!monitor:aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee", gotAuth)
@@ -155,7 +156,7 @@ func TestPBS_apiGet_ErrorResponse(t *testing.T) {
 	})
 	coll, _, _, _ := newTestPBSCollector(t, handler)
 
-	_, err := coll.apiGet(context.Background(), "/test")
+	_, err := coll.apiGet(context.Background(), "test", "/test")
 	require.Error(t, err)
 
 	var apiErr *APIError
@@ -469,7 +470,7 @@ func TestPBS_apiGet_RetryableOnNetworkError(t *testing.T) {
 	cfg := PBSConfig{Name: "test", Host: ts.URL, TokenID: "t", TokenSecret: "s", PollInterval: 60 * time.Second}
 	coll := NewPBSCollector(cfg, pool, c, s)
 
-	_, err = coll.apiGet(context.Background(), "/test")
+	_, err = coll.apiGet(context.Background(), "test", "/test")
 	require.Error(t, err)
 	var re *RetryableError
 	assert.ErrorAs(t, err, &re)
@@ -551,7 +552,7 @@ func TestPBS_ApiGet_CancelledContext(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	_, err := coll.apiGet(ctx, "/api2/json/nodes")
+	_, err := coll.apiGet(ctx, "test", "/api2/json/nodes")
 	assert.Error(t, err)
 }
 
@@ -561,10 +562,138 @@ func TestPBS_ApiGet_Non200Status(t *testing.T) {
 	})
 	coll, _, _, _ := newTestPBSCollector(t, handler)
 
-	_, err := coll.apiGet(context.Background(), "/api2/json/status/datastore-usage")
+	_, err := coll.apiGet(context.Background(), "test", "/api2/json/status/datastore-usage")
 	assert.Error(t, err)
 
 	var apiErr *APIError
 	assert.ErrorAs(t, err, &apiErr)
 	assert.Equal(t, http.StatusUnauthorized, apiErr.StatusCode)
+}
+
+// ---------------------------------------------------------------------------
+// Fuzz tests — PBS response parsing
+// ---------------------------------------------------------------------------
+
+// FuzzParsePBSDatastoreUsage exercises the system-wide datastore usage
+// response. All capacity fields are nullable (*int64) and error is *string,
+// so the parser must not panic on null or unexpected values.
+func FuzzParsePBSDatastoreUsage(f *testing.F) {
+	f.Add([]byte(`{"data":[{"store":"local","total":1073741824000,"used":536870912000,"avail":536870912000}]}`))
+	f.Add([]byte(`{"data":[{"store":"broken","error":"device not found"}]}`))           // error field present
+	f.Add([]byte(`{"data":[{"store":"partial","total":null,"used":null,"avail":null}]}`)) // all nulls
+	f.Add([]byte(`{"data":[]}`))
+	f.Add([]byte(`{}`))
+
+	f.Fuzz(func(t *testing.T, data []byte) {
+		// Mirrors the anonymous struct in collectAllDatastoreUsage exactly.
+		var resp struct {
+			Data []struct {
+				Store string  `json:"store"`
+				Total *int64  `json:"total"`
+				Used  *int64  `json:"used"`
+				Avail *int64  `json:"avail"`
+				Error *string `json:"error"`
+			} `json:"data"`
+		}
+		if err := json.Unmarshal(data, &resp); err != nil {
+			return
+		}
+		// Dereference all pointer fields as the production code does — must not panic.
+		for _, ds := range resp.Data {
+			if ds.Total != nil {
+				_ = *ds.Total
+			}
+			if ds.Used != nil {
+				_ = *ds.Used
+			}
+			if ds.Avail != nil {
+				_ = *ds.Avail
+			}
+			if ds.Error != nil {
+				_ = *ds.Error
+			}
+		}
+	})
+}
+
+// FuzzParsePBSSnapshots exercises snapshot list parsing. The verification
+// sub-object is a nullable pointer; size is also nullable.
+func FuzzParsePBSSnapshots(f *testing.F) {
+	f.Add([]byte(`{"data":[{"backup-type":"vm","backup-id":"100","backup-time":1700000000,"size":5368709120,"verification":{"state":"ok"}}]}`))
+	f.Add([]byte(`{"data":[{"backup-type":"ct","backup-id":"200","backup-time":1700000000,"size":1073741824,"verification":null}]}`))   // null verification
+	f.Add([]byte(`{"data":[{"backup-type":"vm","backup-id":"101","backup-time":1700000000,"size":null,"verification":{"state":"failed"}}]}`)) // null size + failed
+	f.Add([]byte(`{"data":[{"backup-type":"host","backup-id":"pbs","backup-time":1700000000}]}`)) // minimal — no size or verification
+	f.Add([]byte(`{"data":[]}`))
+	f.Add([]byte(`{}`))
+
+	f.Fuzz(func(t *testing.T, data []byte) {
+		// Mirrors the anonymous struct in collectSnapshots exactly.
+		var resp struct {
+			Data []struct {
+				BackupType   string `json:"backup-type"`
+				BackupID     string `json:"backup-id"`
+				BackupTime   int64  `json:"backup-time"`
+				Size         *int64 `json:"size"`
+				Verification *struct {
+					State string `json:"state"`
+				} `json:"verification"`
+			} `json:"data"`
+		}
+		if err := json.Unmarshal(data, &resp); err != nil {
+			return
+		}
+		// Mirror the nil checks in collectSnapshots — must never panic.
+		for _, s := range resp.Data {
+			if s.Verification != nil {
+				_ = s.Verification.State == "ok"
+			}
+			if s.Size != nil {
+				_ = *s.Size
+			}
+		}
+	})
+}
+
+// FuzzParsePBSTasks exercises task list parsing, including the worker_type
+// normalisation (verificationjob→verify, garbage_collection→gc) and the
+// nullable EndTime field.
+func FuzzParsePBSTasks(f *testing.F) {
+	f.Add([]byte(`{"data":[{"upid":"UPID:pbs:1","worker_type":"backup","worker_id":"100","starttime":1700000000,"endtime":1700003600,"status":"OK","user":"root@pam"}]}`))
+	f.Add([]byte(`{"data":[{"upid":"UPID:pbs:2","worker_type":"verificationjob","worker_id":"local","starttime":1700000000,"status":"running","user":"admin@pbs"}]}`)) // no endtime
+	f.Add([]byte(`{"data":[{"upid":"UPID:pbs:3","worker_type":"garbage_collection","worker_id":"","starttime":1700000000,"endtime":1700001800,"status":"OK","user":"root@pam"}]}`))
+	f.Add([]byte(`{"data":[{"upid":"UPID:pbs:4","worker_type":"prune","worker_id":"local","starttime":1700000000,"endtime":null,"status":"OK","user":"root@pam"}]}`)) // null endtime
+	f.Add([]byte(`{"data":[]}`))
+	f.Add([]byte(`{}`))
+
+	f.Fuzz(func(t *testing.T, data []byte) {
+		// Mirrors the anonymous struct in collectTasks exactly.
+		var resp struct {
+			Data []struct {
+				UPID      string `json:"upid"`
+				Type      string `json:"worker_type"`
+				ID        string `json:"worker_id"`
+				StartTime int64  `json:"starttime"`
+				EndTime   *int64 `json:"endtime"`
+				Status    string `json:"status"`
+				User      string `json:"user"`
+			} `json:"data"`
+		}
+		if err := json.Unmarshal(data, &resp); err != nil {
+			return
+		}
+		// Mirror task type normalisation from collectTasks — must never panic.
+		for _, task := range resp.Data {
+			taskType := task.Type
+			switch taskType {
+			case "verificationjob":
+				taskType = "verify"
+			case "garbage_collection":
+				taskType = "gc"
+			}
+			_ = taskType
+			if task.EndTime != nil {
+				_ = *task.EndTime
+			}
+		}
+	})
 }

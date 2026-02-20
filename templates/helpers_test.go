@@ -1,6 +1,9 @@
 package templates
 
 import (
+	"fmt"
+	"math"
+	"strings"
 	"testing"
 	"time"
 
@@ -21,6 +24,9 @@ func TestFormatBytes(t *testing.T) {
 		{"megabytes", 10_485_760, "10.0 MB"},
 		{"gigabytes", 8_000_000_000, "7.5 GB"},
 		{"terabytes", 4_000_000_000_000, "3.6 TB"},
+		{"petabytes", 1_125_899_906_842_624, "1.0 PB"},
+		{"exabytes", 1_152_921_504_606_846_976, "1.0 EB"},
+		{"max int64", math.MaxInt64, "8.0 EB"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -379,6 +385,34 @@ func TestAllBackupsSorted_TieBreak(t *testing.T) {
 	assert.Empty(t, AllBackupsSorted(nil))
 }
 
+func TestAllBackupsSorted_BackupIDTiebreak(t *testing.T) {
+	// Two backups with identical BackupTime but different BackupID — exercises
+	// the second sort criterion (BackupID ascending).
+	b1 := &model.Backup{BackupID: "200", BackupTime: 500}
+	b2 := &model.Backup{BackupID: "101", BackupTime: 500}
+	backups := map[string]map[string]*model.Backup{
+		"pbs1": {"a": b1, "b": b2},
+	}
+	list := AllBackupsSorted(backups)
+	assert.Len(t, list, 2)
+	assert.Equal(t, "101", list[0].BackupID) // lexicographically first
+	assert.Equal(t, "200", list[1].BackupID)
+}
+
+func TestAllBackupsSorted_DatastoreTiebreak(t *testing.T) {
+	// Two backups with identical BackupTime AND BackupID — only the Datastore
+	// field differs, so the third sort criterion must be reached.
+	b1 := &model.Backup{BackupID: "101", Datastore: "ds-b", BackupTime: 200}
+	b2 := &model.Backup{BackupID: "101", Datastore: "ds-a", BackupTime: 200}
+	backups := map[string]map[string]*model.Backup{
+		"pbs1": {"a": b1, "b": b2},
+	}
+	list := AllBackupsSorted(backups)
+	assert.Len(t, list, 2)
+	assert.Equal(t, "ds-a", list[0].Datastore) // lexicographically first
+	assert.Equal(t, "ds-b", list[1].Datastore)
+}
+
 func TestHeaderSummary(t *testing.T) {
 	snap := cache.CacheSnapshot{
 		Nodes: map[string]map[string]*model.Node{
@@ -418,4 +452,125 @@ func TestSparklinePolyline(t *testing.T) {
 	out = SparklinePolyline(points, 240, 40)
 	assert.Contains(t, out, "0.0,")
 	assert.Contains(t, out, "240.0,")
+}
+
+func TestLatestBackupTime(t *testing.T) {
+	backups := map[string]map[string]*model.Backup{
+		"pbs1": {
+			"homelab/101": {BackupID: "101", Datastore: "homelab", BackupTime: 2000},
+			"offsite/101": {BackupID: "101", Datastore: "offsite", BackupTime: 1000},
+		},
+	}
+	// Returns the most recent timestamp (2000, not 1000)
+	assert.Equal(t, int64(2000), LatestBackupTime(backups, 101))
+
+	// No backups for this VMID → 0
+	assert.Equal(t, int64(0), LatestBackupTime(backups, 999))
+
+	// Empty map → 0
+	assert.Equal(t, int64(0), LatestBackupTime(nil, 101))
+}
+
+func TestIntPtrSortValue(t *testing.T) {
+	v := 42
+	assert.Equal(t, "42", IntPtrSortValue(&v))
+	assert.Equal(t, "-1", IntPtrSortValue(nil))
+}
+
+func TestTaskDurationSeconds(t *testing.T) {
+	start := int64(1000)
+	end := int64(1060)
+	task := &model.PBSTask{StartTime: start, EndTime: &end}
+	assert.Equal(t, int64(60), TaskDurationSeconds(task))
+
+	// Running task (no EndTime) → -1
+	running := &model.PBSTask{StartTime: start}
+	assert.Equal(t, int64(-1), TaskDurationSeconds(running))
+}
+
+// ---------------------------------------------------------------------------
+// Benchmarks
+// ---------------------------------------------------------------------------
+
+func BenchmarkFormatBytes(b *testing.B) {
+	for b.Loop() {
+		FormatBytes(8_500_000_000)
+	}
+}
+
+func BenchmarkSparklinePolyline(b *testing.B) {
+	points := make([]model.SparklinePoint, 100)
+	for i := range points {
+		points[i] = model.SparklinePoint{Value: float64(i)}
+	}
+	b.ResetTimer()
+	for b.Loop() {
+		SparklinePolyline(points, 240, 40)
+	}
+}
+
+func BenchmarkAllBackupsSorted(b *testing.B) {
+	ds := make(map[string]*model.Backup)
+	for i := range 100 {
+		key := fmt.Sprintf("%d", i+100)
+		ds[key] = &model.Backup{BackupID: key, BackupTime: int64(i * 3600)}
+	}
+	backups := map[string]map[string]*model.Backup{"pbs1": ds}
+	b.ResetTimer()
+	for b.Loop() {
+		AllBackupsSorted(backups)
+	}
+}
+
+func BenchmarkSortedGuestList(b *testing.B) {
+	inner := make(map[int]*model.Guest)
+	for i := range 100 {
+		inner[i+100] = &model.Guest{VMID: i + 100, Name: fmt.Sprintf("vm-%d", i)}
+	}
+	guests := map[string]map[int]*model.Guest{"pve1": inner}
+	b.ResetTimer()
+	for b.Loop() {
+		SortedGuestList(guests)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Fuzz tests
+// ---------------------------------------------------------------------------
+
+func FuzzFormatBytes(f *testing.F) {
+	f.Add(int64(0))
+	f.Add(int64(1023))
+	f.Add(int64(1024))
+	f.Add(int64(8_500_000_000))
+	f.Add(int64(-1))
+	f.Add(int64(1_125_899_906_842_624)) // 1 PB — one unit below the previously-panicking boundary
+	f.Add(int64(1_152_921_504_606_846_976)) // 1 EB — previously triggered index-out-of-bounds panic
+	f.Add(int64(math.MaxInt64))             // 8 EB — largest valid int64
+	f.Fuzz(func(t *testing.T, n int64) {
+		out := FormatBytes(n)
+		// Must not be empty and must end with a known unit suffix.
+		validSuffix := false
+		for _, s := range []string{" B", " KB", " MB", " GB", " TB", " PB", " EB"} {
+			if strings.HasSuffix(out, s) {
+				validSuffix = true
+				break
+			}
+		}
+		if !validSuffix {
+			t.Errorf("FormatBytes(%d) = %q: missing known unit suffix", n, out)
+		}
+	})
+}
+
+func FuzzBackupIDMatchesVMID(f *testing.F) {
+	f.Add("101", "101")
+	f.Add("lxc-200", "200")
+	f.Add("vm-100", "100")
+	f.Add("lxc-1010", "10")
+	f.Add("", "0")
+	f.Fuzz(func(t *testing.T, id, vmidStr string) {
+		// Must not panic
+		_ = backupIDMatchesVMID(id, vmidStr)
+	})
 }

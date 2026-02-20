@@ -237,3 +237,42 @@ func TestPollTemperature_ConnectionFailure(t *testing.T) {
 	_, err = tc.pollTemperature(ctx)
 	assert.Error(t, err)
 }
+
+func BenchmarkParseSensorsJSON(b *testing.B) {
+	data := []byte(`{
+		"coretemp-isa-0000": {
+			"Adapter": "ISA adapter",
+			"Package id 0": {"temp1_input": 52.0, "temp1_max": 100.0},
+			"Core 0": {"temp2_input": 48.0},
+			"Core 1": {"temp3_input": 50.0}
+		}
+	}`)
+	b.ResetTimer()
+	for b.Loop() {
+		_, _ = parseSensorsJSON(data)
+	}
+}
+
+func FuzzParseSensorsJSON(f *testing.F) {
+	// coretemp ISA (Intel) — baseline.
+	f.Add([]byte(`{"coretemp-isa-0000":{"Adapter":"ISA adapter","Package id 0":{"temp1_input":52.0}}}`))
+	// k10temp PCI (AMD) with Adapter key — exercises the second isRelevantChip prefix.
+	f.Add([]byte(`{"k10temp-pci-00c3":{"Adapter":"PCI adapter","Tctl":{"temp1_input":65.5}}}`))
+	// zenpower chip — exercises the "zenpower" isRelevantChip prefix.
+	f.Add([]byte(`{"zenpower-pci-00c3":{"Tctl":{"temp1_input":58.0}}}`))
+	// acpitz chip — exercises the "acpitz" isRelevantChip prefix.
+	f.Add([]byte(`{"acpitz-acpi-0":{"temp1":{"temp1_input":45.0}}}`))
+	// Non-CPU chip — rejected by isRelevantChip; exercises the skip branch.
+	f.Add([]byte(`{"nvme-pci-0100":{"Composite":{"temp1_input":40.0}}}`))
+	// Mixed: one relevant chip and one irrelevant chip — exercises multi-chip iteration and
+	// the maxTemp comparison path when only one chip contributes readings.
+	f.Add([]byte(`{"coretemp-isa-0000":{"Core 0":{"temp1_input":55.0}},"nvme-pci-0100":{"Composite":{"temp1_input":40.0}}}`))
+	// Non-float64 temp_input — string value fails the val.(float64) assertion; no temp found.
+	f.Add([]byte(`{"coretemp-isa-0000":{"Core 0":{"temp1_input":"65"}}}`))
+	// Empty sensors map.
+	f.Add([]byte(`{}`))
+	f.Fuzz(func(t *testing.T, data []byte) {
+		// Must not panic
+		_, _ = parseSensorsJSON(data)
+	})
+}

@@ -10,7 +10,7 @@ import (
 func TestParseATAAttributes(t *testing.T) {
 	tests := []struct {
 		name     string
-		data     []map[string]interface{}
+		data     []map[string]any
 		wantLen  int
 		wantID   int
 		wantRaw  int64
@@ -19,7 +19,7 @@ func TestParseATAAttributes(t *testing.T) {
 	}{
 		{
 			name: "simple numeric raw string",
-			data: []map[string]interface{}{
+			data: []map[string]any{
 				{
 					"id": float64(5), "name": "Reallocated_Sector_Ct",
 					"value": float64(100), "worst": float64(100),
@@ -31,7 +31,7 @@ func TestParseATAAttributes(t *testing.T) {
 		},
 		{
 			name: "raw with extra info (Min/Max)",
-			data: []map[string]interface{}{
+			data: []map[string]any{
 				{
 					"id": float64(194), "name": "Temperature_Celsius",
 					"value": float64(68), "worst": float64(55),
@@ -43,7 +43,7 @@ func TestParseATAAttributes(t *testing.T) {
 		},
 		{
 			name: "raw as float64 (numeric JSON)",
-			data: []map[string]interface{}{
+			data: []map[string]any{
 				{
 					"id": float64(9), "name": "Power_On_Hours",
 					"value": float64(97), "worst": float64(97),
@@ -55,7 +55,7 @@ func TestParseATAAttributes(t *testing.T) {
 		},
 		{
 			name: "nil raw value",
-			data: []map[string]interface{}{
+			data: []map[string]any{
 				{
 					"id": float64(1), "name": "Raw_Read_Error_Rate",
 					"value": float64(100), "worst": float64(100),
@@ -67,7 +67,7 @@ func TestParseATAAttributes(t *testing.T) {
 		},
 		{
 			name: "raw with only digits followed by whitespace",
-			data: []map[string]interface{}{
+			data: []map[string]any{
 				{
 					"id": float64(187), "name": "Reported_Uncorrect",
 					"value": float64(100), "worst": float64(100),
@@ -79,12 +79,12 @@ func TestParseATAAttributes(t *testing.T) {
 		},
 		{
 			name:    "missing id field",
-			data:    []map[string]interface{}{{"name": "no_id"}},
+			data:    []map[string]any{{"name": "no_id"}},
 			wantErr: true,
 		},
 		{
 			name: "multiple attributes",
-			data: []map[string]interface{}{
+			data: []map[string]any{
 				{"id": float64(5), "name": "Reallocated_Sector_Ct", "value": float64(100), "worst": float64(100), "thresh": float64(10), "raw": "0"},
 				{"id": float64(9), "name": "Power_On_Hours", "value": float64(97), "worst": float64(97), "thresh": float64(0), "raw": "25000"},
 			},
@@ -92,7 +92,7 @@ func TestParseATAAttributes(t *testing.T) {
 		},
 		{
 			name:    "empty list",
-			data:    []map[string]interface{}{},
+			data:    []map[string]any{},
 			wantLen: 0,
 		},
 	}

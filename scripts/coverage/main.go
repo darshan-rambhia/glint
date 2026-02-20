@@ -108,8 +108,8 @@ func main() {
 }
 
 func extractTotalCoverage(allCoverage string) (int, error) {
-	lines := strings.Split(allCoverage, "\n")
-	for _, line := range lines {
+	lines := strings.SplitSeq(allCoverage, "\n")
+	for line := range lines {
 		if strings.HasPrefix(line, "total:") {
 			parts := strings.Fields(line)
 			if len(parts) < 3 {

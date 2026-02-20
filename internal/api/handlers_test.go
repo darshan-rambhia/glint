@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
@@ -12,9 +13,20 @@ import (
 	"github.com/darshan-rambhia/glint/internal/cache"
 	"github.com/darshan-rambhia/glint/internal/model"
 	"github.com/darshan-rambhia/glint/internal/store"
+	"github.com/darshan-rambhia/glint/templates"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+// failWriter is a ResponseWriter whose Write always returns an error.
+// Used to exercise the "client disconnected" debug-log paths in renderHTML / writeJSON.
+type failWriter struct {
+	header http.Header
+}
+
+func (fw *failWriter) Header() http.Header         { return fw.header }
+func (fw *failWriter) WriteHeader(int)              {}
+func (fw *failWriter) Write([]byte) (int, error)   { return 0, errors.New("write failed") }
 
 func newTestServer(t *testing.T) (*Server, *cache.Cache, *store.Store) {
 	t.Helper()
@@ -187,6 +199,29 @@ func TestHandleBackupsFragment_Populated(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 }
 
+// --- handleEventsFragment ---
+
+func TestHandleEventsFragment_Empty(t *testing.T) {
+	srv, _, _ := newTestServer(t)
+	req := httptest.NewRequest(http.MethodGet, "/fragments/events", nil)
+	w := httptest.NewRecorder()
+	srv.mux.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Contains(t, w.Header().Get("Content-Type"), "text/html")
+}
+
+func TestHandleEventsFragment_Populated(t *testing.T) {
+	srv, c, _ := newTestServer(t)
+	populateCache(c)
+
+	req := httptest.NewRequest(http.MethodGet, "/fragments/events", nil)
+	w := httptest.NewRecorder()
+	srv.mux.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+}
+
 // --- handleDisksFragment ---
 
 func TestHandleDisksFragment_Empty(t *testing.T) {
@@ -241,7 +276,7 @@ func TestHandleNodeSparkline_Default(t *testing.T) {
 	srv, _, s := newTestServer(t)
 
 	now := time.Now()
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		err := s.InsertNodeSnapshot(model.NodeSnapshot{
 			Timestamp: now.Add(-time.Duration(i) * time.Hour).Unix(),
 			Instance:  "pve1",
@@ -441,7 +476,7 @@ func TestHandleNodeSparklineSVG_WithData(t *testing.T) {
 	srv, _, s := newTestServer(t)
 
 	now := time.Now()
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		require.NoError(t, s.InsertNodeSnapshot(model.NodeSnapshot{
 			Timestamp: now.Add(-time.Duration(i) * time.Hour).Unix(),
 			Instance:  "pve1",
@@ -524,7 +559,7 @@ func TestHandleHealthz_NoData(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 	assert.Equal(t, "application/json", w.Header().Get("Content-Type"))
 
-	var resp map[string]interface{}
+	var resp map[string]any
 	require.NoError(t, json.NewDecoder(w.Body).Decode(&resp))
 	assert.Equal(t, "no_data", resp["status"])
 	assert.Contains(t, resp, "timestamp")
@@ -541,11 +576,11 @@ func TestHandleHealthz_WithData(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, w.Code)
 
-	var resp map[string]interface{}
+	var resp map[string]any
 	require.NoError(t, json.NewDecoder(w.Body).Decode(&resp))
 	assert.Equal(t, "ok", resp["status"])
 
-	collectors, ok := resp["collectors"].(map[string]interface{})
+	collectors, ok := resp["collectors"].(map[string]any)
 	require.True(t, ok)
 	assert.Contains(t, collectors, "pve1")
 }
@@ -673,11 +708,87 @@ func TestHandleHealthz_MultipleCollectors(t *testing.T) {
 	w := httptest.NewRecorder()
 	srv.mux.ServeHTTP(w, req)
 
-	var resp map[string]interface{}
+	var resp map[string]any
 	require.NoError(t, json.NewDecoder(w.Body).Decode(&resp))
 	assert.Equal(t, "ok", resp["status"])
 
-	collectors := resp["collectors"].(map[string]interface{})
+	collectors := resp["collectors"].(map[string]any)
 	assert.Contains(t, collectors, "pve1")
 	assert.Contains(t, collectors, "pbs1")
+}
+
+// --- SecurityHeadersMiddleware ---
+
+func TestSecurityHeadersMiddleware(t *testing.T) {
+	srv, _, _ := newTestServer(t)
+	req := httptest.NewRequest(http.MethodGet, "/healthz", nil)
+	w := httptest.NewRecorder()
+	// Use the full handler stack (includes SecurityHeadersMiddleware).
+	srv.server.Handler.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, "nosniff", w.Header().Get("X-Content-Type-Options"))
+	assert.Equal(t, "DENY", w.Header().Get("X-Frame-Options"))
+	assert.NotEmpty(t, w.Header().Get("Content-Security-Policy"))
+	assert.Equal(t, "strict-origin-when-cross-origin", w.Header().Get("Referrer-Policy"))
+	assert.Equal(t, "no-store", w.Header().Get("Cache-Control"))
+}
+
+// --- renderHTML / writeJSON error paths ---
+
+func TestRenderHTML_WriteBodyFail(t *testing.T) {
+	w := &failWriter{header: make(http.Header)}
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	// The component renders fine; the subsequent Write to w returns an error.
+	// This exercises the slog.Debug path — must not panic.
+	renderHTML(w, r, templates.Dashboard(cache.CacheSnapshot{}))
+}
+
+func TestWriteJSON_MarshalError(t *testing.T) {
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	// channels cannot be marshalled to JSON.
+	writeJSON(w, r, make(chan int))
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+}
+
+func TestWriteJSON_WriteBodyFail(t *testing.T) {
+	w := &failWriter{header: make(http.Header)}
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	// Marshal succeeds; Write to w fails — exercises the slog.Debug path.
+	writeJSON(w, r, "ok")
+}
+
+// --- handleNodeSparklineSVG store error ---
+
+func TestHandleNodeSparklineSVG_StoreError(t *testing.T) {
+	dir := t.TempDir()
+	s, err := store.New(filepath.Join(dir, "test.db"))
+	require.NoError(t, err)
+	c := cache.New()
+	srv := NewServer(":0", c, s)
+	s.Close() // closed store forces a query error
+
+	req := httptest.NewRequest(http.MethodGet, "/fragments/sparkline/node/pve1/node1", nil)
+	w := httptest.NewRecorder()
+	srv.mux.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+}
+
+// --- handleGuestSparklineSVG store error ---
+
+func TestHandleGuestSparklineSVG_StoreError(t *testing.T) {
+	dir := t.TempDir()
+	s, err := store.New(filepath.Join(dir, "test.db"))
+	require.NoError(t, err)
+	c := cache.New()
+	srv := NewServer(":0", c, s)
+	s.Close() // closed store forces a query error
+
+	req := httptest.NewRequest(http.MethodGet, "/fragments/sparkline/guest/pve1/101", nil)
+	w := httptest.NewRecorder()
+	srv.mux.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
 }
