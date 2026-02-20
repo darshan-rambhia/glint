@@ -544,7 +544,7 @@ func FuzzFormatBytes(f *testing.F) {
 	f.Add(int64(1024))
 	f.Add(int64(8_500_000_000))
 	f.Add(int64(-1))
-	f.Add(int64(1_125_899_906_842_624)) // 1 PB — one unit below the previously-panicking boundary
+	f.Add(int64(1_125_899_906_842_624))     // 1 PB — one unit below the previously-panicking boundary
 	f.Add(int64(1_152_921_504_606_846_976)) // 1 EB — previously triggered index-out-of-bounds panic
 	f.Add(int64(math.MaxInt64))             // 8 EB — largest valid int64
 	f.Fuzz(func(t *testing.T, n int64) {

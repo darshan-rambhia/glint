@@ -24,9 +24,9 @@ type failWriter struct {
 	header http.Header
 }
 
-func (fw *failWriter) Header() http.Header         { return fw.header }
-func (fw *failWriter) WriteHeader(int)              {}
-func (fw *failWriter) Write([]byte) (int, error)   { return 0, errors.New("write failed") }
+func (fw *failWriter) Header() http.Header       { return fw.header }
+func (fw *failWriter) WriteHeader(int)           {}
+func (fw *failWriter) Write([]byte) (int, error) { return 0, errors.New("write failed") }
 
 func newTestServer(t *testing.T) (*Server, *cache.Cache, *store.Store) {
 	t.Helper()
@@ -859,7 +859,7 @@ func TestHandleWidget_WithData(t *testing.T) {
 	assert.Equal(t, 1, resp.Nodes.Offline)
 
 	assert.Equal(t, 40.0, resp.CPU.UsagePct)
-	assert.Greater(t, resp.Memory.TotalBytes, int64(0))
+	assert.Positive(t, resp.Memory.TotalBytes)
 	assert.Greater(t, resp.Memory.UsagePct, 0.0)
 
 	assert.Equal(t, 3, resp.Guests.Total)

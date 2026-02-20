@@ -1041,10 +1041,10 @@ func FuzzParseNodeStatus(f *testing.F) {
 func FuzzParseLoadAvg(f *testing.F) {
 	f.Add([]byte(`["0.42","0.38","0.35"]`)) // string array
 	f.Add([]byte(`[0.10,0.20,0.30]`))       // float array
-	f.Add([]byte(`["0.5",1.0,null]`))        // mixed
-	f.Add([]byte(`[]`))                      // empty
-	f.Add([]byte(`[0.5]`))                   // too short
-	f.Add([]byte(`"0.5"`))                   // scalar string
+	f.Add([]byte(`["0.5",1.0,null]`))       // mixed
+	f.Add([]byte(`[]`))                     // empty
+	f.Add([]byte(`[0.5]`))                  // too short
+	f.Add([]byte(`"0.5"`))                  // scalar string
 	f.Add([]byte(`null`))
 	f.Add([]byte(`0.5`))
 
@@ -1062,11 +1062,11 @@ func FuzzParseLoadAvg(f *testing.F) {
 // inline parsing in collectSMARTWithType.
 func FuzzParseSMARTResponse(f *testing.F) {
 	f.Add([]byte(`{"health":"PASSED","type":"ata","wearout":90,"attributes":[],"text":""}`))
-	f.Add([]byte(`{"health":"PASSED","type":"ata","wearout":"85","attributes":[]}`))          // wearout as string
-	f.Add([]byte(`{"health":"PASSED","type":"nvme","wearout":null,"text":"Temp: 40 C"}`))     // null wearout
-	f.Add([]byte(`{"health":"FAILED","type":"ata","wearout":90.7,"attributes":[]}`))          // fractional wearout
-	f.Add([]byte(`{"health":"UNKNOWN","type":"scsi","wearout":true}`))                        // unexpected wearout type
-	f.Add([]byte(`{"health":"PASSED","type":"ata","wearout":[]}`))                            // array wearout
+	f.Add([]byte(`{"health":"PASSED","type":"ata","wearout":"85","attributes":[]}`))      // wearout as string
+	f.Add([]byte(`{"health":"PASSED","type":"nvme","wearout":null,"text":"Temp: 40 C"}`)) // null wearout
+	f.Add([]byte(`{"health":"FAILED","type":"ata","wearout":90.7,"attributes":[]}`))      // fractional wearout
+	f.Add([]byte(`{"health":"UNKNOWN","type":"scsi","wearout":true}`))                    // unexpected wearout type
+	f.Add([]byte(`{"health":"PASSED","type":"ata","wearout":[]}`))                        // array wearout
 	f.Add([]byte(`{}`))
 
 	f.Fuzz(func(t *testing.T, data []byte) {

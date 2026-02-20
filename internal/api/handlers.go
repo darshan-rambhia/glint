@@ -127,7 +127,7 @@ func renderHTML(w http.ResponseWriter, r *http.Request, component templ.Componen
 }
 
 // writeJSON marshals v to JSON into a buffer first, then writes it to the
-// response. This ensures marshalling errors can be returned as a proper 500.
+// response. This ensures marshaling errors can be returned as a proper 500.
 func writeJSON(w http.ResponseWriter, r *http.Request, v any) {
 	data, err := json.Marshal(v)
 	if err != nil {
@@ -453,7 +453,7 @@ func (s *Server) handleWidget(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Disks — categorise by SMART status bitfield.
+	// Disks — categorize by SMART status bitfield.
 	for _, d := range snap.Disks {
 		resp.Disks.Total++
 		switch {

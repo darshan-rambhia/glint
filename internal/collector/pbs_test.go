@@ -579,7 +579,7 @@ func TestPBS_ApiGet_Non200Status(t *testing.T) {
 // so the parser must not panic on null or unexpected values.
 func FuzzParsePBSDatastoreUsage(f *testing.F) {
 	f.Add([]byte(`{"data":[{"store":"local","total":1073741824000,"used":536870912000,"avail":536870912000}]}`))
-	f.Add([]byte(`{"data":[{"store":"broken","error":"device not found"}]}`))           // error field present
+	f.Add([]byte(`{"data":[{"store":"broken","error":"device not found"}]}`))             // error field present
 	f.Add([]byte(`{"data":[{"store":"partial","total":null,"used":null,"avail":null}]}`)) // all nulls
 	f.Add([]byte(`{"data":[]}`))
 	f.Add([]byte(`{}`))
@@ -620,9 +620,9 @@ func FuzzParsePBSDatastoreUsage(f *testing.F) {
 // sub-object is a nullable pointer; size is also nullable.
 func FuzzParsePBSSnapshots(f *testing.F) {
 	f.Add([]byte(`{"data":[{"backup-type":"vm","backup-id":"100","backup-time":1700000000,"size":5368709120,"verification":{"state":"ok"}}]}`))
-	f.Add([]byte(`{"data":[{"backup-type":"ct","backup-id":"200","backup-time":1700000000,"size":1073741824,"verification":null}]}`))   // null verification
+	f.Add([]byte(`{"data":[{"backup-type":"ct","backup-id":"200","backup-time":1700000000,"size":1073741824,"verification":null}]}`))         // null verification
 	f.Add([]byte(`{"data":[{"backup-type":"vm","backup-id":"101","backup-time":1700000000,"size":null,"verification":{"state":"failed"}}]}`)) // null size + failed
-	f.Add([]byte(`{"data":[{"backup-type":"host","backup-id":"pbs","backup-time":1700000000}]}`)) // minimal — no size or verification
+	f.Add([]byte(`{"data":[{"backup-type":"host","backup-id":"pbs","backup-time":1700000000}]}`))                                             // minimal — no size or verification
 	f.Add([]byte(`{"data":[]}`))
 	f.Add([]byte(`{}`))
 

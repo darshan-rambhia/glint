@@ -158,7 +158,7 @@ func runFuzz(projectRoot string, target fuzzTarget, fuzzTime string) fuzzResult 
 
 	// Distinguish real fuzz failures (which write a corpus file) from spurious
 	// "context deadline exceeded" failures that can occur when the fuzz timer
-	// fires and races with test finalisation in Go's fuzz runner.
+	// fires and races with test finalization in Go's fuzz runner.
 	passed := err == nil ||
 		(strings.Contains(output, "context deadline exceeded") &&
 			!strings.Contains(output, "Failing input written to"))
