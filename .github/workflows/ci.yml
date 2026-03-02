@@ -41,7 +41,7 @@ jobs:
         run: go run ./scripts/coverage
       - name: Upload coverage report
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-report
           path: target/reports/
@@ -86,7 +86,7 @@ jobs:
         run: BENCH_TIME=1x go run ./scripts/bench
       - name: Upload benchmark report
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: bench-report
           path: target/reports/bench.txt
@@ -119,7 +119,7 @@ jobs:
         run: FUZZ_TIME=5s go run ./scripts/fuzz
       - name: Upload fuzz report
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: fuzz-report
           path: target/reports/fuzz.txt
