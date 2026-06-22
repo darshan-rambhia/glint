@@ -13,7 +13,7 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/go-setup
       - name: golangci-lint
         id: lint
@@ -34,7 +34,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/go-setup
       - name: Run tests with coverage
         id: test
@@ -79,7 +79,7 @@ jobs:
   bench:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/go-setup
       - name: Run benchmarks (smoke — 1 iteration each)
         id: bench
@@ -112,7 +112,7 @@ jobs:
   fuzz:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/go-setup
       - name: Fuzz (5s per target)
         id: fuzz
@@ -149,7 +149,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [lint, test, bench, fuzz]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/go-setup
       - name: Build
         id: build
