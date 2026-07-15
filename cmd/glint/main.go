@@ -7,10 +7,12 @@ import (
 	"fmt"
 	"log/slog"
 	"net"
+	"net/http"
 	"os"
 	"os/signal"
 	"runtime"
 	"runtime/debug"
+	"strings"
 	"syscall"
 	"time"
 
@@ -71,9 +73,44 @@ func buildInfo() (ver, sha, built, dirty string) {
 	return
 }
 
+// runHealthcheck probes the local /healthz endpoint on the server's listen
+// address and returns a process exit code (0 healthy, 1 unhealthy). It mirrors
+// the address resolution the server uses but deliberately skips config.Load so
+// the container HEALTHCHECK reflects server liveness, not config validity.
+func runHealthcheck() int {
+	listen := os.Getenv("GLINT_LISTEN")
+	if listen == "" {
+		listen = ":3800"
+	}
+
+	host, port, err := net.SplitHostPort(listen)
+	if err != nil {
+		host, port = "", strings.TrimPrefix(listen, ":")
+	}
+	if host == "" || host == "0.0.0.0" || host == "::" {
+		host = "127.0.0.1"
+	}
+
+	url := fmt.Sprintf("http://%s/healthz", net.JoinHostPort(host, port))
+	client := &http.Client{Timeout: 5 * time.Second}
+	resp, err := client.Get(url)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "healthcheck: %s\n", err)
+		return 1
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		fmt.Fprintf(os.Stderr, "healthcheck: unexpected status %d\n", resp.StatusCode)
+		return 1
+	}
+	return 0
+}
+
 func main() {
 	configPath := flag.String("config", "", "path to glint.yml config file")
 	showVersion := flag.Bool("version", false, "print version and exit")
+	healthcheck := flag.Bool("healthcheck", false, "probe the local /healthz endpoint and exit (0 healthy, 1 unhealthy)")
 	flag.Parse()
 
 	ver, sha, built, dirty := buildInfo()
@@ -83,6 +120,14 @@ func main() {
 		fmt.Printf("glint %s\n  commit:    %s (%s)\n  built:     %s\n  go:        %s\n  platform:  %s/%s\n",
 			ver, sha, dirty, built, runtime.Version(), runtime.GOOS, runtime.GOARCH)
 		os.Exit(0)
+	}
+
+	// The runtime image is `FROM scratch` with no shell or HTTP client, so the
+	// container HEALTHCHECK invokes the binary itself. Probe the same listen
+	// address the server binds to (GLINT_LISTEN, default :3800) without loading
+	// the full config, so a probe never fails on unrelated config validation.
+	if *healthcheck {
+		os.Exit(runHealthcheck())
 	}
 
 	// Load configuration
