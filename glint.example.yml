@@ -56,6 +56,10 @@ alerts:
   datastore_full:
     threshold: 85
     severity: "warning"
+  guest_cpu_high:
+    threshold: 90
+    duration: "15m"
+    severity: "warning"
   node_disk_full:
     threshold: 85
     severity: "warning"

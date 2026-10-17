@@ -131,6 +131,11 @@ alerts:
     threshold: 85           # Percent datastore usage
     severity: "warning"
 
+  guest_cpu_high:
+    threshold: 90           # Percent of the guest's allocated cores
+    duration: "15m"         # Must be sustained this long
+    severity: "warning"
+
   node_disk_full:
     threshold: 85           # Percent node root filesystem usage
     severity: "warning"
@@ -147,6 +152,7 @@ alerts:
 | `backup_stale` | 36h | warning | No recent backup |
 | `disk_smart_failed` | --- | critical | Manufacturer SMART failure |
 | `datastore_full` | 85% | warning | PBS datastore near capacity |
+| `guest_cpu_high` | 90% for 15m | warning | Guest pinned against its allocated cores |
 | `node_disk_full` | 85% | warning | Node root filesystem near capacity |
 | `guest_disk_full` | 85% | warning | Guest root disk near capacity (running LXCs; VMs without guest agent report 0 and are skipped) |
 

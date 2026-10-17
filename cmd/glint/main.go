@@ -316,6 +316,13 @@ func main() {
 			alertCfg.NodeDiskFull.Severity = cfg.Alerts.NodeDiskFull.Severity
 		}
 	}
+	if cfg.Alerts.GuestCPUHigh != nil {
+		alertCfg.GuestCPUHigh.Threshold = cfg.Alerts.GuestCPUHigh.Threshold
+		alertCfg.GuestCPUHigh.Duration = cfg.Alerts.GuestCPUHigh.Duration.Duration
+		if cfg.Alerts.GuestCPUHigh.Severity != "" {
+			alertCfg.GuestCPUHigh.Severity = cfg.Alerts.GuestCPUHigh.Severity
+		}
+	}
 	if cfg.Alerts.GuestDiskFull != nil {
 		alertCfg.GuestDiskFull.Threshold = cfg.Alerts.GuestDiskFull.Threshold
 		if cfg.Alerts.GuestDiskFull.Severity != "" {
