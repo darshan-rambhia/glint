@@ -72,16 +72,16 @@ templ GuestRow(guest *model.Guest, backups map[string]map[string]*model.Backup) 
 		</td>
 		<td data-sort-value={ func() string {
 			if guest.CPUs > 0 {
-				return fmt.Sprintf("%.4f", guest.CPU/float64(guest.CPUs)*100)
+				return fmt.Sprintf("%.4f", guest.CPU*100)
 			}
 			return "0"
 		}() }>
 			if guest.CPUs > 0 {
 				<div class="mini-bar">
 					<div class="bar">
-						<div class={ "bar-fill", ProgressBarClass(guest.CPU / float64(guest.CPUs) * 100) } style={ fmt.Sprintf("width:%.0f%%", ProgressBarWidth(guest.CPU / float64(guest.CPUs) * 100)) }></div>
+						<div class={ "bar-fill", ProgressBarClass(guest.CPU * 100) } style={ fmt.Sprintf("width:%.0f%%", ProgressBarWidth(guest.CPU * 100)) }></div>
 					</div>
-					{ FormatPct(guest.CPU / float64(guest.CPUs) * 100) }
+					{ FormatPct(guest.CPU * 100) }
 				</div>
 			} else {
 				<span class="td-dim">0%</span>
