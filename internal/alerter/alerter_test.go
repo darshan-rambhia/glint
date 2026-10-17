@@ -719,3 +719,53 @@ func TestRun_CancelsCleanly(t *testing.T) {
 	err := <-done
 	assert.ErrorIs(t, err, context.Canceled)
 }
+
+func TestEvaluate_NodeDiskFull(t *testing.T) {
+	c := cache.New()
+	a, p := newTestAlerter(t, c, DefaultAlertConfig())
+
+	c.UpdateNodes("pve1", map[string]*model.Node{
+		"node1": {Instance: "pve1", Name: "node1", RootFS: model.DiskUsage{Used: 90, Total: 100}},
+	})
+
+	a.evaluate(context.Background())
+	require.Len(t, p.sent, 1)
+	assert.Equal(t, "node_disk_full", p.sent[0].AlertType)
+	assert.Contains(t, p.sent[0].Message, "90%")
+}
+
+func TestEvaluate_GuestDiskFull(t *testing.T) {
+	c := cache.New()
+	a, p := newTestAlerter(t, c, DefaultAlertConfig())
+
+	c.UpdateGuests("main", map[int]*model.Guest{
+		101: {Instance: "pve1", ClusterID: "main", VMID: 101, Name: "network-services", Status: "running", Disk: 99, MaxDisk: 100},
+		102: {Instance: "pve1", ClusterID: "main", VMID: 102, Name: "pbs", Status: "running", Disk: 50, MaxDisk: 100},
+		// QEMU without guest agent reports disk 0; must not alert.
+		200: {Instance: "pve1", ClusterID: "main", VMID: 200, Name: "vm", Status: "running", Disk: 0, MaxDisk: 100},
+	})
+
+	a.evaluate(context.Background())
+	require.Len(t, p.sent, 1)
+	assert.Equal(t, "guest_disk_full", p.sent[0].AlertType)
+	assert.Equal(t, "network-services", p.sent[0].Subject)
+	assert.Contains(t, p.sent[0].Message, "99%")
+
+	// Cooldown suppresses a repeat.
+	a.evaluate(context.Background())
+	assert.Len(t, p.sent, 1)
+}
+
+func TestEvaluate_GuestDiskFullSkipsStopped(t *testing.T) {
+	c := cache.New()
+	cfg := DefaultAlertConfig()
+	cfg.GuestDown = nil
+	a, p := newTestAlerter(t, c, cfg)
+
+	c.UpdateGuests("main", map[int]*model.Guest{
+		101: {Instance: "pve1", ClusterID: "main", VMID: 101, Name: "x", Status: "stopped", Disk: 99, MaxDisk: 100},
+	})
+
+	a.evaluate(context.Background())
+	assert.Empty(t, p.sent)
+}

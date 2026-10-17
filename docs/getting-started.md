@@ -140,6 +140,12 @@ alerts:
   datastore_full:
     threshold: 85
     severity: "warning"
+  node_disk_full:
+    threshold: 85
+    severity: "warning"
+  guest_disk_full:
+    threshold: 85
+    severity: "warning"
 ```
 
 !!! tip "Environment variables"

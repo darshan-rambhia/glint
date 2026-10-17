@@ -130,6 +130,14 @@ alerts:
   datastore_full:
     threshold: 85           # Percent datastore usage
     severity: "warning"
+
+  node_disk_full:
+    threshold: 85           # Percent node root filesystem usage
+    severity: "warning"
+
+  guest_disk_full:
+    threshold: 85           # Percent guest root disk usage (running LXCs)
+    severity: "warning"
 ```
 
 | Rule | Default Threshold | Default Severity | Description |
@@ -139,6 +147,8 @@ alerts:
 | `backup_stale` | 36h | warning | No recent backup |
 | `disk_smart_failed` | --- | critical | Manufacturer SMART failure |
 | `datastore_full` | 85% | warning | PBS datastore near capacity |
+| `node_disk_full` | 85% | warning | Node root filesystem near capacity |
+| `guest_disk_full` | 85% | warning | Guest root disk near capacity (running LXCs; VMs without guest agent report 0 and are skipped) |
 
 ---
 

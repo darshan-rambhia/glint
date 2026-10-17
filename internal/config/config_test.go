@@ -97,6 +97,9 @@ alerts:
   datastore_full:
     threshold: 85
     severity: "warning"
+  guest_disk_full:
+    threshold: 80
+    severity: "warning"
 `
 
 func TestLoad_FromYAML(t *testing.T) {
@@ -158,6 +161,9 @@ func TestLoad_FromYAML(t *testing.T) {
 
 	require.NotNil(t, cfg.Alerts.DatastoreFull)
 	assert.Equal(t, 85.0, cfg.Alerts.DatastoreFull.Threshold)
+
+	require.NotNil(t, cfg.Alerts.GuestDiskFull)
+	assert.Equal(t, 80.0, cfg.Alerts.GuestDiskFull.Threshold)
 }
 
 func TestLoad_FileNotFound(t *testing.T) {

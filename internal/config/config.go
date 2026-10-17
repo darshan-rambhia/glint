@@ -81,6 +81,8 @@ type AlertsConfig struct {
 	BackupStale     *AlertBackupStale     `yaml:"backup_stale,omitempty"`
 	DiskSmartFailed *AlertDiskSmartFailed `yaml:"disk_smart_failed,omitempty"`
 	DatastoreFull   *AlertDatastoreFull   `yaml:"datastore_full,omitempty"`
+	NodeDiskFull    *AlertDiskFull        `yaml:"node_disk_full,omitempty"`
+	GuestDiskFull   *AlertDiskFull        `yaml:"guest_disk_full,omitempty"`
 }
 
 type AlertNodeCPUHigh struct {
@@ -104,6 +106,11 @@ type AlertDiskSmartFailed struct {
 }
 
 type AlertDatastoreFull struct {
+	Threshold float64 `yaml:"threshold"`
+	Severity  string  `yaml:"severity"`
+}
+
+type AlertDiskFull struct {
 	Threshold float64 `yaml:"threshold"`
 	Severity  string  `yaml:"severity"`
 }
@@ -250,6 +257,12 @@ func (c *Config) Validate() error {
 		if a.Threshold <= 0 {
 			return fmt.Errorf("alerts.datastore_full: threshold must be > 0")
 		}
+	}
+	if a := c.Alerts.NodeDiskFull; a != nil && a.Threshold <= 0 {
+		return fmt.Errorf("alerts.node_disk_full: threshold must be > 0")
+	}
+	if a := c.Alerts.GuestDiskFull; a != nil && a.Threshold <= 0 {
+		return fmt.Errorf("alerts.guest_disk_full: threshold must be > 0")
 	}
 
 	return nil
