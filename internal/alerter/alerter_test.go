@@ -769,3 +769,49 @@ func TestEvaluate_GuestDiskFullSkipsStopped(t *testing.T) {
 	a.evaluate(context.Background())
 	assert.Empty(t, p.sent)
 }
+
+func TestEvaluate_GuestCPUHigh(t *testing.T) {
+	c := cache.New()
+	cfg := DefaultAlertConfig()
+	cfg.GuestCPUHigh.Duration = 0
+	a, p := newTestAlerter(t, c, cfg)
+
+	// CPU is a fraction of allocated cores: 0.95 = 95% of 2 cores.
+	c.UpdateGuests("main", map[int]*model.Guest{
+		402: {Instance: "pve1", ClusterID: "main", VMID: 402, Name: "media", Status: "running", CPU: 0.95, CPUs: 2},
+		403: {Instance: "pve1", ClusterID: "main", VMID: 403, Name: "idle", Status: "running", CPU: 0.10, CPUs: 2},
+	})
+
+	a.evaluate(context.Background())
+	assert.Empty(t, p.sent, "first call should only seed sustained tracker")
+
+	a.evaluate(context.Background())
+	require.Len(t, p.sent, 1)
+	assert.Equal(t, "guest_cpu_high", p.sent[0].AlertType)
+	assert.Equal(t, "media", p.sent[0].Subject)
+	assert.Contains(t, p.sent[0].Message, "95% of 2 cores")
+}
+
+func TestEvaluate_GuestCPUClearsWhenStopped(t *testing.T) {
+	c := cache.New()
+	cfg := DefaultAlertConfig()
+	cfg.GuestCPUHigh.Duration = 0
+	cfg.GuestDown = nil
+	a, p := newTestAlerter(t, c, cfg)
+
+	c.UpdateGuests("main", map[int]*model.Guest{
+		402: {Instance: "pve1", ClusterID: "main", VMID: 402, Name: "media", Status: "running", CPU: 0.95, CPUs: 2},
+	})
+	a.evaluate(context.Background())
+
+	c.UpdateGuests("main", map[int]*model.Guest{
+		402: {Instance: "pve1", ClusterID: "main", VMID: 402, Name: "media", Status: "stopped", CPU: 0.95, CPUs: 2},
+	})
+	a.evaluate(context.Background())
+
+	c.UpdateGuests("main", map[int]*model.Guest{
+		402: {Instance: "pve1", ClusterID: "main", VMID: 402, Name: "media", Status: "running", CPU: 0.95, CPUs: 2},
+	})
+	a.evaluate(context.Background())
+	assert.Empty(t, p.sent, "stopping the guest should reset the sustained tracker")
+}

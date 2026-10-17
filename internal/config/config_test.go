@@ -100,6 +100,9 @@ alerts:
   guest_disk_full:
     threshold: 80
     severity: "warning"
+  guest_cpu_high:
+    threshold: 95
+    duration: "10m"
 `
 
 func TestLoad_FromYAML(t *testing.T) {
@@ -164,6 +167,10 @@ func TestLoad_FromYAML(t *testing.T) {
 
 	require.NotNil(t, cfg.Alerts.GuestDiskFull)
 	assert.Equal(t, 80.0, cfg.Alerts.GuestDiskFull.Threshold)
+
+	require.NotNil(t, cfg.Alerts.GuestCPUHigh)
+	assert.Equal(t, 95.0, cfg.Alerts.GuestCPUHigh.Threshold)
+	assert.Equal(t, 10*time.Minute, cfg.Alerts.GuestCPUHigh.Duration.Duration)
 }
 
 func TestLoad_FileNotFound(t *testing.T) {

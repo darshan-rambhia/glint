@@ -24,6 +24,7 @@ type AlertConfig struct {
 	DatastoreFull   *ThresholdAlert `yaml:"datastore_full"`
 	NodeDiskFull    *ThresholdAlert `yaml:"node_disk_full"`
 	GuestDiskFull   *ThresholdAlert `yaml:"guest_disk_full"`
+	GuestCPUHigh    *ThresholdAlert `yaml:"guest_cpu_high"`
 }
 
 // ThresholdAlert triggers when a value exceeds a threshold.
@@ -80,6 +81,9 @@ func DefaultAlertConfig() AlertConfig {
 		},
 		GuestDiskFull: &ThresholdAlert{
 			Threshold: 85, Severity: "warning", Cooldown: 6 * time.Hour,
+		},
+		GuestCPUHigh: &ThresholdAlert{
+			Threshold: 90, Duration: 15 * time.Minute, Severity: "warning", Cooldown: 1 * time.Hour,
 		},
 	}
 }
@@ -242,6 +246,36 @@ func (a *Alerter) evaluate(ctx context.Context) {
 						},
 					})
 				}
+			}
+		}
+	}
+
+	// Guest CPU alerts. PVE cpu is a fraction of the guest's allocated cores,
+	// so 90% means the guest is pinned against its own core limit.
+	if a.config.GuestCPUHigh != nil {
+		for _, guests := range snap.Guests {
+			for _, guest := range guests {
+				key := fmt.Sprintf("guest_cpu:%s/%d", guest.ClusterID, guest.VMID)
+				if guest.Status != "running" {
+					delete(a.sustained, key)
+					continue
+				}
+				pct := guest.CPU * 100
+				a.checkSustainedThreshold(ctx, now, key, pct, a.config.GuestCPUHigh,
+					model.Notification{
+						AlertType: "guest_cpu_high",
+						Severity:  a.config.GuestCPUHigh.Severity,
+						Title:     fmt.Sprintf("Guest CPU High: %s (%d)", guest.Name, guest.VMID),
+						Message:   fmt.Sprintf("[%s] %s (ID %d) CPU at %.0f%% of %d cores for %s+", guest.Instance, guest.Name, guest.VMID, pct, guest.CPUs, a.config.GuestCPUHigh.Duration),
+						Instance:  guest.Instance,
+						Subject:   guest.Name,
+						Timestamp: now,
+						Metadata: map[string]string{
+							"vmid":  fmt.Sprintf("%d", guest.VMID),
+							"value": fmt.Sprintf("%.0f", pct),
+						},
+					},
+				)
 			}
 		}
 	}

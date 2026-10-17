@@ -83,9 +83,16 @@ type AlertsConfig struct {
 	DatastoreFull   *AlertDatastoreFull   `yaml:"datastore_full,omitempty"`
 	NodeDiskFull    *AlertDiskFull        `yaml:"node_disk_full,omitempty"`
 	GuestDiskFull   *AlertDiskFull        `yaml:"guest_disk_full,omitempty"`
+	GuestCPUHigh    *AlertGuestCPUHigh    `yaml:"guest_cpu_high,omitempty"`
 }
 
 type AlertNodeCPUHigh struct {
+	Threshold float64  `yaml:"threshold"`
+	Duration  Duration `yaml:"duration"`
+	Severity  string   `yaml:"severity"`
+}
+
+type AlertGuestCPUHigh struct {
 	Threshold float64  `yaml:"threshold"`
 	Duration  Duration `yaml:"duration"`
 	Severity  string   `yaml:"severity"`
@@ -263,6 +270,14 @@ func (c *Config) Validate() error {
 	}
 	if a := c.Alerts.GuestDiskFull; a != nil && a.Threshold <= 0 {
 		return fmt.Errorf("alerts.guest_disk_full: threshold must be > 0")
+	}
+	if a := c.Alerts.GuestCPUHigh; a != nil {
+		if a.Threshold <= 0 {
+			return fmt.Errorf("alerts.guest_cpu_high: threshold must be > 0")
+		}
+		if a.Duration.Duration <= 0 {
+			return fmt.Errorf("alerts.guest_cpu_high: duration must be > 0")
+		}
 	}
 
 	return nil
