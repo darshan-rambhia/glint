@@ -182,10 +182,8 @@ func (p *PVECollector) Collect(ctx context.Context) error {
 	}
 
 	for _, guest := range guestMap {
-		cpuPct := float64(0)
-		if guest.CPUs > 0 {
-			cpuPct = guest.CPU / float64(guest.CPUs) * 100
-		}
+		// PVE reports guest cpu as a fraction of the guest's allocated cores.
+		cpuPct := guest.CPU * 100
 		snap := model.GuestSnapshot{
 			Timestamp: ts,
 			Instance:  p.config.Name,
