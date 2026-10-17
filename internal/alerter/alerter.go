@@ -22,6 +22,8 @@ type AlertConfig struct {
 	BackupStale     *BackupAlert    `yaml:"backup_stale"`
 	DiskSmartFailed *SimpleAlert    `yaml:"disk_smart_failed"`
 	DatastoreFull   *ThresholdAlert `yaml:"datastore_full"`
+	NodeDiskFull    *ThresholdAlert `yaml:"node_disk_full"`
+	GuestDiskFull   *ThresholdAlert `yaml:"guest_disk_full"`
 }
 
 // ThresholdAlert triggers when a value exceeds a threshold.
@@ -71,6 +73,12 @@ func DefaultAlertConfig() AlertConfig {
 			Severity: "critical", Cooldown: 6 * time.Hour,
 		},
 		DatastoreFull: &ThresholdAlert{
+			Threshold: 85, Severity: "warning", Cooldown: 6 * time.Hour,
+		},
+		NodeDiskFull: &ThresholdAlert{
+			Threshold: 85, Severity: "warning", Cooldown: 6 * time.Hour,
+		},
+		GuestDiskFull: &ThresholdAlert{
 			Threshold: 85, Severity: "warning", Cooldown: 6 * time.Hour,
 		},
 	}
@@ -180,6 +188,60 @@ func (a *Alerter) evaluate(ctx context.Context) {
 						Metadata:  map[string]string{"value": fmt.Sprintf("%.0f", memPct)},
 					},
 				)
+			}
+		}
+	}
+
+	// Node root filesystem full alerts
+	if a.config.NodeDiskFull != nil {
+		for instance, nodes := range snap.Nodes {
+			for _, node := range nodes {
+				if node.RootFS.Total <= 0 {
+					continue
+				}
+				pct := float64(node.RootFS.Used) / float64(node.RootFS.Total) * 100
+				if pct >= a.config.NodeDiskFull.Threshold {
+					key := fmt.Sprintf("node_disk:%s/%s", instance, node.Name)
+					a.fire(ctx, now, key, a.config.NodeDiskFull.Cooldown, model.Notification{
+						AlertType: "node_disk_full",
+						Severity:  a.config.NodeDiskFull.Severity,
+						Title:     fmt.Sprintf("Node Disk Full: %s/%s", instance, node.Name),
+						Message:   fmt.Sprintf("[%s/%s] Root filesystem at %.0f%% capacity", instance, node.Name, pct),
+						Instance:  instance,
+						Subject:   node.Name,
+						Timestamp: now,
+						Metadata:  map[string]string{"usage_pct": fmt.Sprintf("%.0f", pct)},
+					})
+				}
+			}
+		}
+	}
+
+	// Guest disk full alerts. Only running guests: PVE reports disk usage for
+	// running LXCs; QEMU VMs report 0 without a guest agent, so they're skipped.
+	if a.config.GuestDiskFull != nil {
+		for _, guests := range snap.Guests {
+			for _, guest := range guests {
+				if guest.Status != "running" || guest.MaxDisk <= 0 || guest.Disk <= 0 {
+					continue
+				}
+				pct := float64(guest.Disk) / float64(guest.MaxDisk) * 100
+				if pct >= a.config.GuestDiskFull.Threshold {
+					key := fmt.Sprintf("guest_disk:%s/%d", guest.ClusterID, guest.VMID)
+					a.fire(ctx, now, key, a.config.GuestDiskFull.Cooldown, model.Notification{
+						AlertType: "guest_disk_full",
+						Severity:  a.config.GuestDiskFull.Severity,
+						Title:     fmt.Sprintf("Guest Disk Full: %s (%d)", guest.Name, guest.VMID),
+						Message:   fmt.Sprintf("[%s] %s (ID %d) root disk at %.0f%% capacity", guest.Instance, guest.Name, guest.VMID, pct),
+						Instance:  guest.Instance,
+						Subject:   guest.Name,
+						Timestamp: now,
+						Metadata: map[string]string{
+							"vmid":      fmt.Sprintf("%d", guest.VMID),
+							"usage_pct": fmt.Sprintf("%.0f", pct),
+						},
+					})
+				}
 			}
 		}
 	}

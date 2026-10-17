@@ -310,6 +310,18 @@ func main() {
 			alertCfg.DatastoreFull.Severity = cfg.Alerts.DatastoreFull.Severity
 		}
 	}
+	if cfg.Alerts.NodeDiskFull != nil {
+		alertCfg.NodeDiskFull.Threshold = cfg.Alerts.NodeDiskFull.Threshold
+		if cfg.Alerts.NodeDiskFull.Severity != "" {
+			alertCfg.NodeDiskFull.Severity = cfg.Alerts.NodeDiskFull.Severity
+		}
+	}
+	if cfg.Alerts.GuestDiskFull != nil {
+		alertCfg.GuestDiskFull.Threshold = cfg.Alerts.GuestDiskFull.Threshold
+		if cfg.Alerts.GuestDiskFull.Severity != "" {
+			alertCfg.GuestDiskFull.Severity = cfg.Alerts.GuestDiskFull.Severity
+		}
+	}
 
 	// Sync the backup-stale threshold to the UI so the dashboard chip matches
 	// the alerter: the chip shows "Stale" exactly when an alert would fire.
