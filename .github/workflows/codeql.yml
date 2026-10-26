@@ -23,7 +23,7 @@ jobs:
           go-version: '1.26'
 
       - name: Install templ
-        run: go install github.com/a-h/templ/cmd/templ@latest
+        run: go install github.com/a-h/templ/cmd/templ@$(go list -m -f '{{.Version}}' github.com/a-h/templ)
 
       - name: Generate templates
         run: templ generate
