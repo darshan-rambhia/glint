@@ -15,6 +15,7 @@ type RetentionConfig struct {
 	BackupSnapshots    time.Duration // default 7d
 	DatastoreSnapshots time.Duration // default 7d
 	AlertLog           time.Duration // default 30d
+	HostReports        time.Duration // default 7d
 }
 
 // DefaultRetention returns the default retention periods.
@@ -26,6 +27,7 @@ func DefaultRetention() RetentionConfig {
 		BackupSnapshots:    7 * 24 * time.Hour,
 		DatastoreSnapshots: 7 * 24 * time.Hour,
 		AlertLog:           30 * 24 * time.Hour,
+		HostReports:        7 * 24 * time.Hour,
 	}
 }
 
@@ -78,6 +80,7 @@ func (p *Pruner) prune() {
 		{"backup_snapshots", p.retention.BackupSnapshots},
 		{"datastore_snapshots", p.retention.DatastoreSnapshots},
 		{"alert_log", p.retention.AlertLog},
+		{"host_reports", p.retention.HostReports},
 	}
 
 	for _, t := range tables {

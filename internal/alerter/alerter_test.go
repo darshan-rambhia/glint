@@ -815,3 +815,113 @@ func TestEvaluate_GuestCPUClearsWhenStopped(t *testing.T) {
 	a.evaluate(context.Background())
 	assert.Empty(t, p.sent, "stopping the guest should reset the sustained tracker")
 }
+
+// hostsOnly disables every non-host rule so tests see only host alerts.
+func hostsOnly() AlertConfig {
+	d := DefaultAlertConfig()
+	return AlertConfig{AgentStale: d.AgentStale, SecurityUpdates: d.SecurityUpdates, RebootRequired: d.RebootRequired}
+}
+
+func TestEvaluateHosts_AgentStale(t *testing.T) {
+	now := time.Now()
+	c := cache.New()
+	c.UpdateHost(&model.HostReport{Agent: "fresh", Received: &model.HostReceived{At: now.Add(-90 * time.Minute).Unix()}})
+	c.UpdateHost(&model.HostReport{Agent: "stale", Received: &model.HostReceived{At: now.Add(-3 * time.Hour).Unix()}})
+	a, p := newTestAlerter(t, c, hostsOnly())
+	a.SetAgents(map[string]time.Duration{"fresh": time.Hour, "stale": time.Hour, "never": time.Hour})
+
+	a.evaluate(context.Background())
+	require.Len(t, p.sent, 1, "never-reported agents get a grace period from startup")
+	assert.Equal(t, "agent_stale", p.sent[0].AlertType)
+	assert.Equal(t, "stale", p.sent[0].Subject)
+	assert.Contains(t, p.sent[0].Message, "no report for 3h0m0s")
+
+	// Long after startup the never-reported agent fires too, the stale one is in cooldown.
+	a.started = now.Add(-3 * time.Hour)
+	a.evaluate(context.Background())
+	require.Len(t, p.sent, 2)
+	assert.Equal(t, "never", p.sent[1].Subject)
+	assert.Contains(t, p.sent[1].Message, "has not reported since Glint started")
+}
+
+func TestEvaluateHosts_SecurityUpdates(t *testing.T) {
+	now := time.Now()
+	c := cache.New()
+	c.UpdateHost(&model.HostReport{
+		Agent:    "old",
+		Updates:  model.HostUpdates{Pending: 5, Security: 2},
+		Received: &model.HostReceived{At: now.Unix(), SecuritySince: now.Add(-73 * time.Hour).Unix()},
+	})
+	c.UpdateHost(&model.HostReport{
+		Agent:    "new",
+		Updates:  model.HostUpdates{Pending: 1, Security: 1},
+		Received: &model.HostReceived{At: now.Unix(), SecuritySince: now.Add(-time.Hour).Unix()},
+	})
+	c.UpdateHost(&model.HostReport{Agent: "clean", Received: &model.HostReceived{At: now.Unix()}})
+	a, p := newTestAlerter(t, c, hostsOnly())
+
+	a.evaluate(context.Background())
+	require.Len(t, p.sent, 1)
+	assert.Equal(t, "security_updates_pending", p.sent[0].AlertType)
+	assert.Equal(t, "old", p.sent[0].Subject)
+	assert.Contains(t, p.sent[0].Message, "2 security update(s) pending for 73h (5 updates total)")
+
+	a.evaluate(context.Background())
+	assert.Len(t, p.sent, 1, "cooldown suppresses repeats")
+}
+
+func TestEvaluateHosts_RebootRequired(t *testing.T) {
+	now := time.Now()
+	c := cache.New()
+	c.UpdateHost(&model.HostReport{
+		Agent:    "edge",
+		Reboot:   model.HostReboot{Required: true, Since: now.Add(-49 * time.Hour).Unix(), Packages: []string{"linux-base", "libc6"}},
+		Received: &model.HostReceived{At: now.Unix()},
+	})
+	c.UpdateHost(&model.HostReport{
+		Agent:    "recent",
+		Reboot:   model.HostReboot{Required: true, Since: now.Add(-time.Hour).Unix()},
+		Received: &model.HostReceived{At: now.Unix()},
+	})
+	c.UpdateHost(&model.HostReport{
+		Agent:  "nopkgs",
+		Reboot: model.HostReboot{Required: true, Since: now.Add(-50 * time.Hour).Unix()},
+	})
+	a, p := newTestAlerter(t, c, hostsOnly())
+
+	a.evaluate(context.Background())
+	require.Len(t, p.sent, 2)
+	msgs := []string{p.sent[0].Message, p.sent[1].Message}
+	assert.Contains(t, msgs, "[edge] reboot required for 49h (linux-base, libc6)")
+	assert.Contains(t, msgs, "[nopkgs] reboot required for 50h")
+}
+
+func TestEvaluateHosts_DisabledRules(t *testing.T) {
+	now := time.Now()
+	c := cache.New()
+	c.UpdateHost(&model.HostReport{
+		Agent:    "edge",
+		Updates:  model.HostUpdates{Security: 1},
+		Reboot:   model.HostReboot{Required: true, Since: 1},
+		Received: &model.HostReceived{At: 1, SecuritySince: 1},
+	})
+	a, p := newTestAlerter(t, c, AlertConfig{})
+	a.SetAgents(map[string]time.Duration{"edge": time.Hour})
+	a.started = now.Add(-24 * time.Hour)
+
+	a.evaluate(context.Background())
+	assert.Empty(t, p.sent)
+}
+
+func TestCleanup_KeepsLastFiredForLongCooldowns(t *testing.T) {
+	a, _ := newTestAlerter(t, cache.New(), AlertConfig{})
+	now := time.Now()
+	a.lastFired["recent"] = now.Add(-12 * time.Hour)
+	a.lastFired["old"] = now.Add(-25 * time.Hour)
+	a.sustained["s"] = now.Add(-7 * time.Hour)
+
+	a.cleanup(now)
+	assert.Contains(t, a.lastFired, "recent", "a 24h cooldown needs its timestamp")
+	assert.NotContains(t, a.lastFired, "old")
+	assert.NotContains(t, a.sustained, "s")
+}

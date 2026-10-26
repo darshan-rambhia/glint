@@ -513,3 +513,62 @@ func validConfig() *Config {
 		},
 	}
 }
+
+const agentSecret = "0123456789abcdef0123456789abcdef"
+
+func TestValidate_Agents(t *testing.T) {
+	tests := []struct {
+		name    string
+		mutate  func(c *Config)
+		wantErr string
+	}{
+		{"missing name", func(c *Config) { c.Agents = []AgentConfig{{Secret: agentSecret}} }, "agents[0]: name is required"},
+		{"duplicate name", func(c *Config) {
+			c.Agents = []AgentConfig{{Name: "a", Secret: agentSecret}, {Name: "a", Secret: agentSecret}}
+		}, `agents[1]: duplicate name "a"`},
+		{"short secret", func(c *Config) { c.Agents = []AgentConfig{{Name: "a", Secret: "short"}} }, "secret must be at least 32"},
+		{"negative interval", func(c *Config) {
+			c.Agents = []AgentConfig{{Name: "a", Secret: agentSecret, Interval: Duration{-time.Second}}}
+		}, "interval must be >= 0"},
+		{"agent_stale", func(c *Config) { c.Alerts.AgentStale = &AlertAgentStale{} }, "missed_reports must be >= 1"},
+		{"security_updates_pending", func(c *Config) { c.Alerts.SecurityUpdates = &AlertMaxAge{} }, "security_updates_pending: max_age"},
+		{"reboot_required", func(c *Config) { c.Alerts.RebootRequired = &AlertMaxAge{} }, "reboot_required: max_age"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := validConfig()
+			tt.mutate(cfg)
+			assert.ErrorContains(t, cfg.Validate(), tt.wantErr)
+		})
+	}
+}
+
+func TestLoad_Agents(t *testing.T) {
+	clearEnv(t)
+	t.Setenv("EDGE_SECRET", agentSecret)
+	p := writeYAML(t, minimalYAML+`
+agents:
+  - name: oci-edge
+    secret: "${EDGE_SECRET}"
+    interval: 30m
+  - name: pve-host
+    secret: "`+agentSecret+`"
+alerts:
+  agent_stale:
+    missed_reports: 3
+    severity: critical
+  security_updates_pending:
+    max_age: 72h
+  reboot_required:
+    max_age: 48h
+    severity: info
+`)
+	cfg, err := Load(p)
+	require.NoError(t, err)
+	require.Len(t, cfg.Agents, 2)
+	assert.Equal(t, 30*time.Minute, cfg.Agents[0].Interval.Duration)
+	assert.Equal(t, map[string]string{"oci-edge": agentSecret, "pve-host": agentSecret}, cfg.AgentSecrets())
+	assert.Equal(t, 3, cfg.Alerts.AgentStale.MissedReports)
+	assert.Equal(t, 72*time.Hour, cfg.Alerts.SecurityUpdates.MaxAge.Duration)
+	assert.Equal(t, "info", cfg.Alerts.RebootRequired.Severity)
+}

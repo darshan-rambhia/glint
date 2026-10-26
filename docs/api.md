@@ -28,6 +28,7 @@ SwaggerUIBundle({
 | `GET` | `/api/widget` | Cluster summary for dashboard widgets |
 | `GET` | `/api/sparkline/node/{instance}/{node}` | Node metric sparkline data points |
 | `GET` | `/api/sparkline/guest/{instance}/{vmid}` | Guest CPU sparkline data points |
+| `POST` | `/api/v1/agents/report` | Signed host agent report (only when agents are configured, see [Host Agent](agent.md)) |
 
 ### HTML Fragments (htmx)
 
@@ -39,6 +40,7 @@ SwaggerUIBundle({
 | `GET` | `/fragments/backups` | Backup status |
 | `GET` | `/fragments/disks` | Disk health table |
 | `GET` | `/fragments/disk/{wwn}` | Disk SMART detail |
+| `GET` | `/fragments/hosts` | Host agent update and reboot status |
 | `GET` | `/fragments/sparkline/node/{instance}/{node}` | Node sparkline SVG |
 | `GET` | `/fragments/sparkline/guest/{instance}/{vmid}` | Guest sparkline SVG |
 

@@ -156,6 +156,19 @@ alerts:
 | `node_disk_full` | 85% | warning | Node root filesystem near capacity |
 | `guest_disk_full` | 85% | warning | Guest root disk near capacity (running LXCs; VMs without guest agent report 0 and are skipped) |
 
+Host agents add three more rules (`agent_stale`, `security_updates_pending`, `reboot_required`). See [Host Agent](agent.md#alerts).
+
+### Host Agents
+
+Hosts that push update and reboot state with `glint agent`. See [Host Agent](agent.md).
+
+```yaml
+agents:
+  - name: edge
+    secret: "${GLINT_AGENT_EDGE_SECRET}"   # at least 32 characters
+    interval: 1h                           # expected report interval (default 1h)
+```
+
 ---
 
 ## Environment Variables

@@ -1,0 +1,85 @@
+package templates
+
+import (
+	"fmt"
+	"github.com/darshan-rambhia/glint/internal/cache"
+	"github.com/darshan-rambhia/glint/internal/model"
+)
+
+templ HostsFragment(snap cache.CacheSnapshot) {
+	<section class="section">
+		<div class="section-header">
+			<h2 class="section-title">Hosts</h2>
+			<span class="section-meta">
+				{ func() string {
+					total, attention := HostCounts(snap.Hosts)
+					if attention > 0 {
+						return fmt.Sprintf("%d agents · %d need attention", total, attention)
+					}
+					return fmt.Sprintf("%d agents", total)
+				}() }
+			</span>
+		</div>
+		if len(snap.Hosts) == 0 {
+			<div class="empty-state">No host agents configured.</div>
+		} else {
+			<div class="table-scroll">
+				<table id="tbl-hosts" class="data-table">
+					<thead>
+						<tr>
+							<th data-sort-key="host">Host</th>
+							<th data-sort-key="os">OS</th>
+							<th data-sort-key="kernel">Kernel</th>
+							<th data-sort-key="updates">Updates</th>
+							<th data-sort-key="security">Security</th>
+							<th data-sort-key="reboot">Reboot</th>
+							<th data-sort-key="lists">apt lists</th>
+							<th data-sort-key="seen">Last report</th>
+							<th data-sort-key="status">Status</th>
+						</tr>
+					</thead>
+					<tbody>
+						for _, h := range SortedHosts(snap.Hosts) {
+							@HostRow(h)
+						}
+					</tbody>
+				</table>
+			</div>
+		}
+	</section>
+}
+
+templ HostRow(h *model.HostReport) {
+	<tr>
+		<td class="td-name" title={ h.Hostname }>{ h.Agent }</td>
+		<td class="td-dim">{ h.OS.PrettyName }</td>
+		<td>
+			{ h.Kernel.Running }
+			if HostKernelPending(h) {
+				<span class="td-dim" title="newest installed kernel">→ { h.Kernel.NewestInstalled }</span>
+			}
+		</td>
+		<td data-sort-value={ fmt.Sprintf("%d", h.Updates.Pending) } title={ HostUpdatesTitle(h) }>
+			{ fmt.Sprintf("%d", h.Updates.Pending) }
+		</td>
+		<td data-sort-value={ fmt.Sprintf("%d", h.Updates.Security) }>
+			if h.Updates.Security > 0 {
+				<span class="chip chip-warn">{ fmt.Sprintf("%d", h.Updates.Security) }</span>
+			} else {
+				<span class="td-dim">0</span>
+			}
+		</td>
+		<td data-sort-value={ fmt.Sprintf("%d", h.Reboot.Since) }>
+			if h.Reboot.Required {
+				<span class="chip chip-warn">{ FormatAgeOrDash(h.Reboot.Since) }</span>
+			} else {
+				<span class="td-dim">—</span>
+			}
+		</td>
+		<td class="td-dim" data-sort-value={ fmt.Sprintf("%d", h.Updates.ListsUpdatedAt) }>{ FormatAgeOrDash(h.Updates.ListsUpdatedAt) }</td>
+		<td class="td-dim" data-sort-value={ fmt.Sprintf("%d", HostReceivedAt(h)) }>{ FormatAgeOrDash(HostReceivedAt(h)) }</td>
+		<td>
+			<span class={ "chip", HostStatusClass(h) } title={ HostErrorsTitle(h) }>{ HostStatusLabel(h) }</span>
+		</td>
+	</tr>
+}

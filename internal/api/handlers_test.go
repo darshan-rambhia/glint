@@ -985,3 +985,34 @@ func TestHandleWidget_GuestPausedStatus(t *testing.T) {
 	assert.Equal(t, 1, resp.Guests.Running)
 	assert.Equal(t, 0, resp.Guests.Stopped)
 }
+
+func TestHandleWidget_Hosts(t *testing.T) {
+	srv, c, _ := newTestServer(t)
+	now := time.Now().Unix()
+	c.UpdateHost(&model.HostReport{
+		Agent:    "edge",
+		Updates:  model.HostUpdates{Pending: 4, Security: 2},
+		Reboot:   model.HostReboot{Required: true},
+		Received: &model.HostReceived{At: now, Interval: 3600},
+	})
+	c.UpdateHost(&model.HostReport{
+		Agent:    "pve",
+		Updates:  model.HostUpdates{Pending: 1},
+		Received: &model.HostReceived{At: now - 3*3600, Interval: 3600},
+	})
+
+	rec := httptest.NewRecorder()
+	srv.handleWidget(rec, httptest.NewRequest(http.MethodGet, "/api/widget", nil))
+	var resp widgetResponse
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
+	assert.Equal(t, widgetHostStats{Total: 2, Stale: 1, PendingUpdates: 5, SecurityUpdates: 2, RebootRequired: 1}, resp.Hosts)
+}
+
+func TestHandleHostsFragment(t *testing.T) {
+	srv, c, _ := newTestServer(t)
+	c.UpdateHost(&model.HostReport{Agent: "edge"})
+	rec := httptest.NewRecorder()
+	srv.mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/fragments/hosts", nil))
+	assert.Equal(t, http.StatusOK, rec.Code)
+	assert.Contains(t, rec.Body.String(), "edge")
+}

@@ -152,3 +152,20 @@ func TestPrunerRun_PrunesOnStartup(t *testing.T) {
 	require.NoError(t, err)
 	assert.Empty(t, points)
 }
+
+func TestPrune_HostReports(t *testing.T) {
+	s := newTestStore(t)
+	now := time.Now().Unix()
+	old := now - int64((8 * 24 * time.Hour).Seconds())
+	require.NoError(t, s.SaveHostReport(hostReport("edge", old, 1, 0, false)))
+	require.NoError(t, s.SaveHostReport(hostReport("edge", now, 1, 0, false)))
+
+	NewPruner(s, DefaultRetention()).prune()
+
+	var n int
+	require.NoError(t, s.db.QueryRow(`SELECT COUNT(*) FROM host_reports`).Scan(&n))
+	assert.Equal(t, 1, n)
+	got, err := s.LoadHostReports()
+	require.NoError(t, err)
+	assert.Len(t, got, 1, "the latest-report table is never pruned")
+}

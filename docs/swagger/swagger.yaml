@@ -1,5 +1,187 @@
 basePath: /
 definitions:
+  api.widgetBackupStats:
+    properties:
+      last_backup_time:
+        type: integer
+      total:
+        type: integer
+    type: object
+  api.widgetCPUStats:
+    properties:
+      usage_pct:
+        type: number
+    type: object
+  api.widgetDiskStats:
+    properties:
+      failed:
+        type: integer
+      passed:
+        type: integer
+      total:
+        type: integer
+      unknown:
+        type: integer
+      warning:
+        type: integer
+    type: object
+  api.widgetGuestStats:
+    properties:
+      lxc:
+        type: integer
+      running:
+        type: integer
+      stopped:
+        type: integer
+      total:
+        type: integer
+      vms:
+        type: integer
+    type: object
+  api.widgetHostStats:
+    properties:
+      pending_updates:
+        type: integer
+      reboot_required:
+        type: integer
+      security_updates:
+        type: integer
+      stale:
+        type: integer
+      total:
+        type: integer
+    type: object
+  api.widgetMemStats:
+    properties:
+      total_bytes:
+        type: integer
+      usage_pct:
+        type: number
+      used_bytes:
+        type: integer
+    type: object
+  api.widgetNodeStats:
+    properties:
+      offline:
+        type: integer
+      online:
+        type: integer
+      total:
+        type: integer
+    type: object
+  api.widgetResponse:
+    properties:
+      backups:
+        $ref: '#/definitions/api.widgetBackupStats'
+      cpu:
+        $ref: '#/definitions/api.widgetCPUStats'
+      disks:
+        $ref: '#/definitions/api.widgetDiskStats'
+      guests:
+        $ref: '#/definitions/api.widgetGuestStats'
+      hosts:
+        $ref: '#/definitions/api.widgetHostStats'
+      memory:
+        $ref: '#/definitions/api.widgetMemStats'
+      nodes:
+        $ref: '#/definitions/api.widgetNodeStats'
+    type: object
+  model.HostKernel:
+    properties:
+      newest_installed:
+        type: string
+      running:
+        type: string
+    type: object
+  model.HostOS:
+    properties:
+      arch:
+        type: string
+      id:
+        type: string
+      pretty_name:
+        type: string
+      version_id:
+        type: string
+    type: object
+  model.HostPackage:
+    properties:
+      from:
+        type: string
+      name:
+        type: string
+      origin:
+        type: string
+      security:
+        type: boolean
+      to:
+        type: string
+    type: object
+  model.HostReboot:
+    properties:
+      packages:
+        items:
+          type: string
+        type: array
+      required:
+        type: boolean
+      since:
+        type: integer
+    type: object
+  model.HostReceived:
+    properties:
+      at:
+        type: integer
+      interval_secs:
+        description: expected report interval
+        type: integer
+      security_since:
+        description: first report with security > 0
+        type: integer
+    type: object
+  model.HostReport:
+    properties:
+      agent:
+        type: string
+      agent_version:
+        type: string
+      collected_at:
+        type: integer
+      errors:
+        description: collection steps that failed
+        items:
+          type: string
+        type: array
+      hostname:
+        type: string
+      kernel:
+        $ref: '#/definitions/model.HostKernel'
+      os:
+        $ref: '#/definitions/model.HostOS'
+      reboot:
+        $ref: '#/definitions/model.HostReboot'
+      received:
+        $ref: '#/definitions/model.HostReceived'
+      updates:
+        $ref: '#/definitions/model.HostUpdates'
+      uptime_secs:
+        type: integer
+    type: object
+  model.HostUpdates:
+    properties:
+      lists_updated_at:
+        type: integer
+      packages:
+        items:
+          $ref: '#/definitions/model.HostPackage'
+        type: array
+      pending:
+        type: integer
+      security:
+        type: integer
+      unattended_last_run:
+        type: integer
+    type: object
   model.SparklinePoint:
     properties:
       ts:
@@ -95,6 +277,48 @@ paths:
           schema:
             type: string
       summary: Node sparkline data
+  /api/v1/agents/report:
+    post:
+      consumes:
+      - application/json
+      description: Accepts a signed report from `glint agent`. Requests must carry
+        X-Glint-Agent, X-Glint-Timestamp, X-Glint-Nonce and X-Glint-Signature headers
+        (HMAC-SHA256, see docs/agent.md).
+      parameters:
+      - description: Host report
+        in: body
+        name: report
+        required: true
+        schema:
+          $ref: '#/definitions/model.HostReport'
+      responses:
+        "204":
+          description: Accepted
+        "400":
+          description: Malformed report
+          schema:
+            type: string
+        "401":
+          description: Authentication failed
+          schema:
+            type: string
+        "413":
+          description: Report too large
+          schema:
+            type: string
+      summary: Ingest a host agent report
+  /api/widget:
+    get:
+      description: Returns cluster summary statistics for homepage-style dashboard
+        widgets (Homepage, Glance, Dashy, etc.)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.widgetResponse'
+      summary: Dashboard widget data
   /fragments/backups:
     get:
       description: Returns HTML fragment of PBS backup status for htmx
@@ -138,6 +362,17 @@ paths:
           schema:
             type: string
       summary: Disk health fragment
+  /fragments/events:
+    get:
+      description: Returns HTML fragment of PBS server-side task events for htmx
+      produces:
+      - text/html
+      responses:
+        "200":
+          description: HTML fragment
+          schema:
+            type: string
+      summary: Events fragment
   /fragments/guests:
     get:
       description: Returns HTML fragment of guest (LXC/QEMU) table for htmx
@@ -149,6 +384,17 @@ paths:
           schema:
             type: string
       summary: Guest table fragment
+  /fragments/hosts:
+    get:
+      description: Returns HTML fragment of host agent update/reboot status for htmx
+      produces:
+      - text/html
+      responses:
+        "200":
+          description: HTML fragment
+          schema:
+            type: string
+      summary: Host agents fragment
   /fragments/nodes:
     get:
       description: Returns HTML fragment of node status cards for htmx

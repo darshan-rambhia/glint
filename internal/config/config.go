@@ -32,6 +32,14 @@ type Config struct {
 	PBS            []PBSConfig          `yaml:"pbs"`
 	Notifications  []NotificationConfig `yaml:"notifications"`
 	Alerts         AlertsConfig         `yaml:"alerts"`
+	Agents         []AgentConfig        `yaml:"agents"`
+}
+
+// AgentConfig registers a host that pushes reports with `glint agent`.
+type AgentConfig struct {
+	Name     string   `yaml:"name"`
+	Secret   string   `yaml:"secret"`   // shared HMAC secret, >= 32 chars
+	Interval Duration `yaml:"interval"` // how often the agent reports; default 1h
 }
 
 // PVEConfig describes a single Proxmox VE instance.
@@ -84,6 +92,21 @@ type AlertsConfig struct {
 	NodeDiskFull    *AlertDiskFull        `yaml:"node_disk_full,omitempty"`
 	GuestDiskFull   *AlertDiskFull        `yaml:"guest_disk_full,omitempty"`
 	GuestCPUHigh    *AlertGuestCPUHigh    `yaml:"guest_cpu_high,omitempty"`
+	AgentStale      *AlertAgentStale      `yaml:"agent_stale,omitempty"`
+	SecurityUpdates *AlertMaxAge          `yaml:"security_updates_pending,omitempty"`
+	RebootRequired  *AlertMaxAge          `yaml:"reboot_required,omitempty"`
+}
+
+// AlertAgentStale fires when an agent misses this many reports in a row.
+type AlertAgentStale struct {
+	MissedReports int    `yaml:"missed_reports"`
+	Severity      string `yaml:"severity"`
+}
+
+// AlertMaxAge fires once a condition has held for longer than MaxAge.
+type AlertMaxAge struct {
+	MaxAge   Duration `yaml:"max_age"`
+	Severity string   `yaml:"severity"`
 }
 
 type AlertNodeCPUHigh struct {
@@ -241,6 +264,23 @@ func (c *Config) Validate() error {
 		return fmt.Errorf("worker_pool_size must be >= 1")
 	}
 
+	seen := map[string]bool{}
+	for i, a := range c.Agents {
+		if a.Name == "" {
+			return fmt.Errorf("agents[%d]: name is required", i)
+		}
+		if seen[a.Name] {
+			return fmt.Errorf("agents[%d]: duplicate name %q", i, a.Name)
+		}
+		seen[a.Name] = true
+		if len(a.Secret) < 32 {
+			return fmt.Errorf("agents[%d] (%s): secret must be at least 32 characters", i, a.Name)
+		}
+		if a.Interval.Duration < 0 {
+			return fmt.Errorf("agents[%d] (%s): interval must be >= 0", i, a.Name)
+		}
+	}
+
 	// Validate alert thresholds
 	if a := c.Alerts.NodeCPUHigh; a != nil {
 		if a.Threshold <= 0 {
@@ -280,7 +320,26 @@ func (c *Config) Validate() error {
 		}
 	}
 
+	if a := c.Alerts.AgentStale; a != nil && a.MissedReports < 1 {
+		return fmt.Errorf("alerts.agent_stale: missed_reports must be >= 1")
+	}
+	if a := c.Alerts.SecurityUpdates; a != nil && a.MaxAge.Duration <= 0 {
+		return fmt.Errorf("alerts.security_updates_pending: max_age must be > 0")
+	}
+	if a := c.Alerts.RebootRequired; a != nil && a.MaxAge.Duration <= 0 {
+		return fmt.Errorf("alerts.reboot_required: max_age must be > 0")
+	}
+
 	return nil
+}
+
+// AgentSecrets returns the agent name -> secret map for request verification.
+func (c *Config) AgentSecrets() map[string]string {
+	m := make(map[string]string, len(c.Agents))
+	for _, a := range c.Agents {
+		m[a.Name] = a.Secret
+	}
+	return m
 }
 
 func defaults() *Config {

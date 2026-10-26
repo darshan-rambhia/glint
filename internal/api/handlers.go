@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/a-h/templ"
+	"github.com/darshan-rambhia/glint/internal/agentauth"
 	"github.com/darshan-rambhia/glint/internal/cache"
 	"github.com/darshan-rambhia/glint/internal/model"
 	"github.com/darshan-rambhia/glint/internal/store"
@@ -28,6 +29,10 @@ type Server struct {
 	store  *store.Store
 	mux    *http.ServeMux
 	server *http.Server
+
+	// Set by EnableAgentIngest.
+	verifier       *agentauth.Verifier
+	agentIntervals map[string]time.Duration
 }
 
 // NewServer creates a new HTTP server.
@@ -87,6 +92,7 @@ func (s *Server) registerRoutes() {
 	s.mux.HandleFunc("GET /fragments/backups", s.handleBackupsFragment)
 	s.mux.HandleFunc("GET /fragments/events", s.handleEventsFragment)
 	s.mux.HandleFunc("GET /fragments/disks", s.handleDisksFragment)
+	s.mux.HandleFunc("GET /fragments/hosts", s.handleHostsFragment)
 	s.mux.HandleFunc("GET /fragments/disk/{wwn}", s.handleDiskDetailFragment)
 
 	// SVG sparkline fragment endpoints (for htmx)
@@ -203,6 +209,16 @@ func (s *Server) handleEventsFragment(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleDisksFragment(w http.ResponseWriter, r *http.Request) {
 	snap := s.cache.Snapshot()
 	renderHTML(w, r, templates.DisksFragment(snap))
+}
+
+// @Summary Host agents fragment
+// @Description Returns HTML fragment of host agent update/reboot status for htmx
+// @Produce html
+// @Success 200 {string} string "HTML fragment"
+// @Router /fragments/hosts [get]
+func (s *Server) handleHostsFragment(w http.ResponseWriter, r *http.Request) {
+	snap := s.cache.Snapshot()
+	renderHTML(w, r, templates.HostsFragment(snap))
 }
 
 // @Summary Disk detail fragment
@@ -362,6 +378,15 @@ type widgetResponse struct {
 	Memory  widgetMemStats    `json:"memory"`
 	Disks   widgetDiskStats   `json:"disks"`
 	Backups widgetBackupStats `json:"backups"`
+	Hosts   widgetHostStats   `json:"hosts"`
+}
+
+type widgetHostStats struct {
+	Total           int `json:"total"`
+	Stale           int `json:"stale"`
+	PendingUpdates  int `json:"pending_updates"`
+	SecurityUpdates int `json:"security_updates"`
+	RebootRequired  int `json:"reboot_required"`
 }
 
 type widgetNodeStats struct {
@@ -475,6 +500,20 @@ func (s *Server) handleWidget(w http.ResponseWriter, r *http.Request) {
 			if b.BackupTime > resp.Backups.LastBackupTime {
 				resp.Backups.LastBackupTime = b.BackupTime
 			}
+		}
+	}
+
+	// Host agents — totals across all reporting hosts.
+	now := time.Now()
+	for _, h := range snap.Hosts {
+		resp.Hosts.Total++
+		if templates.HostStale(h, now) {
+			resp.Hosts.Stale++
+		}
+		resp.Hosts.PendingUpdates += h.Updates.Pending
+		resp.Hosts.SecurityUpdates += h.Updates.Security
+		if h.Reboot.Required {
+			resp.Hosts.RebootRequired++
 		}
 	}
 

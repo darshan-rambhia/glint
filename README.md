@@ -31,6 +31,7 @@ Lightweight Proxmox monitoring dashboard. Single binary, ~10MB, ~30-50MB RAM.
 - **Alerting** — ntfy and webhook notifications with configurable rules and deduplication
 - **Multi-node ready** — supports multiple PVE instances, clusters, and PBS servers
 - **Temperature monitoring** — optional SSH-based CPU temperature polling
+- **Host agent** — `glint agent` pushes signed package-update and reboot state from Debian/Ubuntu hosts outside the Proxmox API
 
 ## Quick Start
 

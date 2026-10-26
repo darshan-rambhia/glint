@@ -186,6 +186,69 @@ type SparklinePoint struct {
 	Value     float64 `json:"value"`
 }
 
+// HostReport is what a `glint agent` pushes about the host it runs on.
+// Timestamps are unix seconds; zero means unknown.
+type HostReport struct {
+	Agent        string        `json:"agent"`
+	AgentVersion string        `json:"agent_version"`
+	Hostname     string        `json:"hostname"`
+	CollectedAt  int64         `json:"collected_at"`
+	OS           HostOS        `json:"os"`
+	UptimeSecs   int64         `json:"uptime_secs"`
+	Kernel       HostKernel    `json:"kernel"`
+	Updates      HostUpdates   `json:"updates"`
+	Reboot       HostReboot    `json:"reboot"`
+	Errors       []string      `json:"errors,omitempty"` // collection steps that failed
+	Received     *HostReceived `json:"received,omitempty"`
+}
+
+// HostOS identifies the operating system of a reporting host.
+type HostOS struct {
+	PrettyName string `json:"pretty_name"`
+	ID         string `json:"id"`
+	VersionID  string `json:"version_id"`
+	Arch       string `json:"arch"`
+}
+
+// HostKernel compares the running kernel with the newest one installed.
+type HostKernel struct {
+	Running         string `json:"running"`
+	NewestInstalled string `json:"newest_installed"`
+}
+
+// HostUpdates summarizes pending package updates.
+type HostUpdates struct {
+	Pending           int           `json:"pending"`
+	Security          int           `json:"security"`
+	Packages          []HostPackage `json:"packages,omitempty"`
+	ListsUpdatedAt    int64         `json:"lists_updated_at"`
+	UnattendedLastRun int64         `json:"unattended_last_run"`
+}
+
+// HostPackage is a single pending upgrade.
+type HostPackage struct {
+	Name     string `json:"name"`
+	From     string `json:"from"`
+	To       string `json:"to"`
+	Origin   string `json:"origin"`
+	Security bool   `json:"security"`
+}
+
+// HostReboot reports whether the host asked for a reboot (Debian/Ubuntu
+// /var/run/reboot-required) and since when.
+type HostReboot struct {
+	Required bool     `json:"required"`
+	Since    int64    `json:"since"`
+	Packages []string `json:"packages,omitempty"`
+}
+
+// HostReceived is server-side state Glint attaches to a stored report.
+type HostReceived struct {
+	At            int64 `json:"at"`
+	SecuritySince int64 `json:"security_since"` // first report with security > 0
+	Interval      int64 `json:"interval_secs"`  // expected report interval
+}
+
 // Notification represents a structured alert message.
 type Notification struct {
 	AlertType string            `json:"alert_type"`

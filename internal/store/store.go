@@ -274,3 +274,66 @@ func (s *Store) UpsertPBSInstance(name, host string) error {
 	}
 	return nil
 }
+
+// SaveHostReport stores an agent's latest report and appends a history row.
+func (s *Store) SaveHostReport(r *model.HostReport) error {
+	if r.Received == nil {
+		return fmt.Errorf("saving host report %s: missing received metadata", r.Agent)
+	}
+	data, err := json.Marshal(r)
+	if err != nil {
+		return fmt.Errorf("marshaling host report: %w", err)
+	}
+	reboot := 0
+	if r.Reboot.Required {
+		reboot = 1
+	}
+
+	tx, err := s.db.Begin()
+	if err != nil {
+		return fmt.Errorf("beginning host report tx: %w", err)
+	}
+	defer tx.Rollback() //nolint:errcheck // no-op after Commit
+
+	if _, err := tx.Exec(`
+		INSERT INTO host_agents (name, received_at, report_json) VALUES (?, ?, ?)
+		ON CONFLICT(name) DO UPDATE SET
+			received_at = excluded.received_at,
+			report_json = excluded.report_json`,
+		r.Agent, r.Received.At, string(data),
+	); err != nil {
+		return fmt.Errorf("upserting host agent %s: %w", r.Agent, err)
+	}
+	if _, err := tx.Exec(`
+		INSERT OR REPLACE INTO host_reports (ts, agent, pending, security, reboot_required)
+		VALUES (?, ?, ?, ?, ?)`,
+		r.Received.At, r.Agent, r.Updates.Pending, r.Updates.Security, reboot,
+	); err != nil {
+		return fmt.Errorf("inserting host report %s: %w", r.Agent, err)
+	}
+	return tx.Commit()
+}
+
+// LoadHostReports returns the latest stored report for every agent, so state
+// such as security_since survives a restart.
+func (s *Store) LoadHostReports() (map[string]*model.HostReport, error) {
+	rows, err := s.db.Query(`SELECT name, report_json FROM host_agents`)
+	if err != nil {
+		return nil, fmt.Errorf("querying host agents: %w", err)
+	}
+	defer rows.Close()
+
+	out := make(map[string]*model.HostReport)
+	for rows.Next() {
+		var name, data string
+		if err := rows.Scan(&name, &data); err != nil {
+			return nil, fmt.Errorf("scanning host agent: %w", err)
+		}
+		var r model.HostReport
+		if err := json.Unmarshal([]byte(data), &r); err != nil {
+			return nil, fmt.Errorf("decoding host report %s: %w", name, err)
+		}
+		out[name] = &r
+	}
+	return out, rows.Err()
+}

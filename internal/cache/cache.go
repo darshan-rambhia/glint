@@ -2,6 +2,7 @@ package cache
 
 import (
 	"maps"
+	"slices"
 	"sync"
 	"time"
 
@@ -18,6 +19,7 @@ type Cache struct {
 	Datastores map[string]map[string]*model.DatastoreStatus
 	Backups    map[string]map[string]*model.Backup
 	Tasks      map[string][]*model.PBSTask
+	Hosts      map[string]*model.HostReport // keyed by agent name
 	LastPoll   map[string]time.Time
 }
 
@@ -29,6 +31,7 @@ type CacheSnapshot struct {
 	Datastores map[string]map[string]*model.DatastoreStatus
 	Backups    map[string]map[string]*model.Backup
 	Tasks      map[string][]*model.PBSTask
+	Hosts      map[string]*model.HostReport // keyed by agent name
 	LastPoll   map[string]time.Time
 }
 
@@ -41,6 +44,7 @@ func New() *Cache {
 		Datastores: make(map[string]map[string]*model.DatastoreStatus),
 		Backups:    make(map[string]map[string]*model.Backup),
 		Tasks:      make(map[string][]*model.PBSTask),
+		Hosts:      make(map[string]*model.HostReport),
 		LastPoll:   make(map[string]time.Time),
 	}
 }
@@ -57,6 +61,7 @@ func (c *Cache) Snapshot() CacheSnapshot {
 		Datastores: make(map[string]map[string]*model.DatastoreStatus, len(c.Datastores)),
 		Backups:    make(map[string]map[string]*model.Backup, len(c.Backups)),
 		Tasks:      make(map[string][]*model.PBSTask, len(c.Tasks)),
+		Hosts:      make(map[string]*model.HostReport, len(c.Hosts)),
 		LastPoll:   make(map[string]time.Time, len(c.LastPoll)),
 	}
 
@@ -112,6 +117,10 @@ func (c *Cache) Snapshot() CacheSnapshot {
 			sl[i] = &cp
 		}
 		snap.Tasks[inst] = sl
+	}
+
+	for name, h := range c.Hosts {
+		snap.Hosts[name] = copyHostReport(h)
 	}
 
 	maps.Copy(snap.LastPoll, c.LastPoll)
@@ -171,6 +180,35 @@ func (c *Cache) UpdateNodeTemperature(instance, node string, temp float64) {
 			n.Temperature = &temp
 		}
 	}
+}
+
+// UpdateHost replaces the report for one host agent.
+func (c *Cache) UpdateHost(r *model.HostReport) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.Hosts[r.Agent] = r
+}
+
+// Host returns a copy of one agent's report, or nil.
+func (c *Cache) Host(agent string) *model.HostReport {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	if h, ok := c.Hosts[agent]; ok {
+		return copyHostReport(h)
+	}
+	return nil
+}
+
+func copyHostReport(h *model.HostReport) *model.HostReport {
+	cp := *h
+	cp.Updates.Packages = slices.Clone(h.Updates.Packages)
+	cp.Reboot.Packages = slices.Clone(h.Reboot.Packages)
+	cp.Errors = slices.Clone(h.Errors)
+	if h.Received != nil {
+		rc := *h.Received
+		cp.Received = &rc
+	}
+	return &cp
 }
 
 // SetLastPoll records the last poll time for a collector.
