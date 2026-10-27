@@ -9,11 +9,14 @@ runs:
     - uses: actions/setup-go@v6
       with:
         go-version: '1.26'
+        check-latest: true # pick up Go security patch releases
         cache: true        # caches GOMODCACHE + GOCACHE, keyed on go.sum
 
+    # Same version as the templ runtime in go.mod: generated code from a newer
+    # CLI calls runtime functions the pinned module doesn't have yet.
     - name: Install templ
       shell: bash
-      run: go install github.com/a-h/templ/cmd/templ@latest
+      run: go install github.com/a-h/templ/cmd/templ@$(go list -m -f '{{.Version}}' github.com/a-h/templ)
 
     - name: Generate templates
       shell: bash

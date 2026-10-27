@@ -31,7 +31,7 @@ jobs:
 
       - name: Install templ and swag
         run: |
-          go install github.com/a-h/templ/cmd/templ@latest
+          go install github.com/a-h/templ/cmd/templ@$(go list -m -f '{{.Version}}' github.com/a-h/templ)
           go install github.com/swaggo/swag/cmd/swag@latest
 
       - name: Generate templ + swagger
