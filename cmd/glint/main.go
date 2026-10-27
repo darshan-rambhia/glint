@@ -16,11 +16,14 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/darshan-rambhia/glint/internal/agentauth"
 	"github.com/darshan-rambhia/glint/internal/alerter"
 	"github.com/darshan-rambhia/glint/internal/api"
 	"github.com/darshan-rambhia/glint/internal/cache"
 	"github.com/darshan-rambhia/glint/internal/collector"
 	"github.com/darshan-rambhia/glint/internal/config"
+	"github.com/darshan-rambhia/glint/internal/hostagent"
+	"github.com/darshan-rambhia/glint/internal/model"
 	"github.com/darshan-rambhia/glint/internal/notify"
 	"github.com/darshan-rambhia/glint/internal/store"
 	"github.com/darshan-rambhia/glint/templates"
@@ -108,6 +111,15 @@ func runHealthcheck() int {
 }
 
 func main() {
+	// `glint agent ...` runs the host reporter instead of the server.
+	if len(os.Args) > 1 && os.Args[1] == "agent" {
+		ver, _, _, _ := buildInfo()
+		ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+		code := hostagent.Main(ctx, os.Args[2:], ver, os.Stderr)
+		stop()
+		os.Exit(code)
+	}
+
 	configPath := flag.String("config", "", "path to glint.yml config file")
 	showVersion := flag.Bool("version", false, "print version and exit")
 	healthcheck := flag.Bool("healthcheck", false, "probe the local /healthz endpoint and exit (0 healthy, 1 unhealthy)")
@@ -330,21 +342,74 @@ func main() {
 		}
 	}
 
+	if c := cfg.Alerts.AgentStale; c != nil {
+		alertCfg.AgentStale.MissedReports = c.MissedReports
+		if c.Severity != "" {
+			alertCfg.AgentStale.Severity = c.Severity
+		}
+	}
+	if c := cfg.Alerts.SecurityUpdates; c != nil {
+		alertCfg.SecurityUpdates.MaxAge = c.MaxAge.Duration
+		if c.Severity != "" {
+			alertCfg.SecurityUpdates.Severity = c.Severity
+		}
+	}
+	if c := cfg.Alerts.RebootRequired; c != nil {
+		alertCfg.RebootRequired.MaxAge = c.MaxAge.Duration
+		if c.Severity != "" {
+			alertCfg.RebootRequired.Severity = c.Severity
+		}
+	}
+	templates.AgentMissedReports = alertCfg.AgentStale.MissedReports
+
+	// Host agents: expected intervals, plus a placeholder per configured agent
+	// so one that never reports still shows up (as "No data") and can alert.
+	agentIntervals := make(map[string]time.Duration, len(cfg.Agents))
+	for _, ac := range cfg.Agents {
+		interval := ac.Interval.Duration
+		if interval == 0 {
+			interval = time.Hour
+		}
+		agentIntervals[ac.Name] = interval
+	}
+	if len(cfg.Agents) > 0 {
+		stored, err := st.LoadHostReports()
+		if err != nil {
+			slog.Error("loading host reports", "error", err)
+		}
+		for name, interval := range agentIntervals {
+			r, ok := stored[name]
+			if !ok {
+				r = &model.HostReport{Agent: name, Received: &model.HostReceived{}}
+			}
+			if r.Received == nil {
+				r.Received = &model.HostReceived{}
+			}
+			r.Received.Interval = int64(interval.Seconds())
+			c.UpdateHost(r)
+		}
+	}
+
 	// Sync the backup-stale threshold to the UI so the dashboard chip matches
 	// the alerter: the chip shows "Stale" exactly when an alert would fire.
 	templates.BackupStaleHours = alertCfg.BackupStale.MaxAge.Hours()
 
 	a := alerter.NewAlerter(c, st, providers, alertCfg)
+	a.SetAgents(agentIntervals)
 	g.Go(func() error { return a.Run(ctx) })
 
 	// Start HTTP server
 	server := api.NewServer(cfg.Listen, c, st)
+	if len(cfg.Agents) > 0 {
+		server.EnableAgentIngest(agentauth.NewVerifier(cfg.AgentSecrets()), agentIntervals)
+	}
 	g.Go(func() error { return server.Run(ctx) })
 	printListenURLs(cfg.Listen)
 
 	slog.Info("all components started",
 		"pve_instances", len(cfg.PVE),
 		"pbs_instances", len(cfg.PBS),
+		"host_agents", len(cfg.Agents),
 		"notifications", len(providers),
 	)
 

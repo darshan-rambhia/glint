@@ -210,3 +210,33 @@ func TestConcurrentReadWrite(t *testing.T) {
 
 	wg.Wait()
 }
+
+func TestHosts_UpdateSnapshotAndCopy(t *testing.T) {
+	c := New()
+	assert.Nil(t, c.Host("edge"))
+
+	c.UpdateHost(&model.HostReport{
+		Agent:    "edge",
+		Errors:   []string{"apt: boom"},
+		Updates:  model.HostUpdates{Packages: []model.HostPackage{{Name: "openssl"}}},
+		Reboot:   model.HostReboot{Packages: []string{"linux-base"}},
+		Received: &model.HostReceived{At: 1},
+	})
+
+	snap := c.Snapshot()
+	require.Contains(t, snap.Hosts, "edge")
+	snap.Hosts["edge"].Updates.Packages[0].Name = "mutated"
+	snap.Hosts["edge"].Reboot.Packages[0] = "mutated"
+	snap.Hosts["edge"].Errors[0] = "mutated"
+	snap.Hosts["edge"].Received.At = 99
+
+	h := c.Host("edge")
+	require.NotNil(t, h)
+	assert.Equal(t, "openssl", h.Updates.Packages[0].Name, "snapshot must be a deep copy")
+	assert.Equal(t, "linux-base", h.Reboot.Packages[0])
+	assert.Equal(t, "apt: boom", h.Errors[0])
+	assert.Equal(t, int64(1), h.Received.At)
+
+	c.UpdateHost(&model.HostReport{Agent: "pending"})
+	assert.Nil(t, c.Host("pending").Received)
+}

@@ -13,7 +13,8 @@ Glint exposes a **`GET /api/widget`** endpoint that returns a JSON summary of yo
   "cpu":     { "usage_pct": 23.4 },
   "memory":  { "used_bytes": 68719476736, "total_bytes": 274877906944, "usage_pct": 25.0 },
   "disks":   { "total": 8, "passed": 7, "failed": 0, "warning": 1, "unknown": 0 },
-  "backups": { "total": 42, "last_backup_time": 1740009600 }
+  "backups": { "total": 42, "last_backup_time": 1740009600 },
+  "hosts": { "total": 2, "stale": 0, "pending_updates": 5, "security_updates": 2, "reboot_required": 1 }
 }
 ```
 
@@ -27,6 +28,9 @@ Glint exposes a **`GET /api/widget`** endpoint that returns a JSON summary of yo
 | `disks.passed/failed/warning/unknown` | Disk counts by SMART health category |
 | `backups.total` | Total backup snapshot count across all PBS instances |
 | `backups.last_backup_time` | Most recent backup as a Unix timestamp |
+| `hosts.total/stale` | [Host agents](agent.md), and how many have missed their reports |
+| `hosts.pending_updates/security_updates` | Pending package updates summed across host agents |
+| `hosts.reboot_required` | Host agents whose host asked for a reboot |
 
 !!! note "Offline nodes"
     Offline nodes are counted but excluded from CPU and memory aggregates.

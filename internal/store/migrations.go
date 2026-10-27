@@ -137,6 +137,23 @@ CREATE TABLE IF NOT EXISTS alert_log (
     severity    TEXT    NOT NULL
 );
 
+-- Latest report per host agent (one row per agent)
+CREATE TABLE IF NOT EXISTS host_agents (
+    name         TEXT PRIMARY KEY,
+    received_at  INTEGER NOT NULL,
+    report_json  TEXT    NOT NULL
+);
+
+-- Host agent report history (7d retention)
+CREATE TABLE IF NOT EXISTS host_reports (
+    ts               INTEGER NOT NULL,
+    agent            TEXT    NOT NULL,
+    pending          INTEGER NOT NULL,
+    security         INTEGER NOT NULL,
+    reboot_required  INTEGER NOT NULL,
+    PRIMARY KEY (ts, agent)
+) WITHOUT ROWID;
+
 -- Secondary indexes
 CREATE INDEX IF NOT EXISTS idx_guest_vmid ON guest_snapshots(instance, vmid, ts);
 CREATE INDEX IF NOT EXISTS idx_smart_wwn ON smart_snapshots(wwn, ts);

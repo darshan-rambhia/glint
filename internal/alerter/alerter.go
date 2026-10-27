@@ -16,15 +16,32 @@ import (
 
 // AlertConfig holds configuration for alert rules.
 type AlertConfig struct {
-	NodeCPUHigh     *ThresholdAlert `yaml:"node_cpu_high"`
-	NodeMemHigh     *ThresholdAlert `yaml:"node_mem_high"`
-	GuestDown       *GuestAlert     `yaml:"guest_down"`
-	BackupStale     *BackupAlert    `yaml:"backup_stale"`
-	DiskSmartFailed *SimpleAlert    `yaml:"disk_smart_failed"`
-	DatastoreFull   *ThresholdAlert `yaml:"datastore_full"`
-	NodeDiskFull    *ThresholdAlert `yaml:"node_disk_full"`
-	GuestDiskFull   *ThresholdAlert `yaml:"guest_disk_full"`
-	GuestCPUHigh    *ThresholdAlert `yaml:"guest_cpu_high"`
+	NodeCPUHigh     *ThresholdAlert  `yaml:"node_cpu_high"`
+	NodeMemHigh     *ThresholdAlert  `yaml:"node_mem_high"`
+	GuestDown       *GuestAlert      `yaml:"guest_down"`
+	BackupStale     *BackupAlert     `yaml:"backup_stale"`
+	DiskSmartFailed *SimpleAlert     `yaml:"disk_smart_failed"`
+	DatastoreFull   *ThresholdAlert  `yaml:"datastore_full"`
+	NodeDiskFull    *ThresholdAlert  `yaml:"node_disk_full"`
+	GuestDiskFull   *ThresholdAlert  `yaml:"guest_disk_full"`
+	GuestCPUHigh    *ThresholdAlert  `yaml:"guest_cpu_high"`
+	AgentStale      *AgentStaleAlert `yaml:"agent_stale"`
+	SecurityUpdates *AgeAlert        `yaml:"security_updates_pending"`
+	RebootRequired  *AgeAlert        `yaml:"reboot_required"`
+}
+
+// AgentStaleAlert triggers when a host agent misses consecutive reports.
+type AgentStaleAlert struct {
+	MissedReports int           `yaml:"missed_reports"`
+	Severity      string        `yaml:"severity"`
+	Cooldown      time.Duration `yaml:"cooldown"`
+}
+
+// AgeAlert triggers once a reported condition has held longer than MaxAge.
+type AgeAlert struct {
+	MaxAge   time.Duration `yaml:"max_age"`
+	Severity string        `yaml:"severity"`
+	Cooldown time.Duration `yaml:"cooldown"`
 }
 
 // ThresholdAlert triggers when a value exceeds a threshold.
@@ -85,6 +102,15 @@ func DefaultAlertConfig() AlertConfig {
 		GuestCPUHigh: &ThresholdAlert{
 			Threshold: 90, Duration: 15 * time.Minute, Severity: "warning", Cooldown: 1 * time.Hour,
 		},
+		AgentStale: &AgentStaleAlert{
+			MissedReports: 2, Severity: "warning", Cooldown: 6 * time.Hour,
+		},
+		SecurityUpdates: &AgeAlert{
+			MaxAge: 72 * time.Hour, Severity: "warning", Cooldown: 24 * time.Hour,
+		},
+		RebootRequired: &AgeAlert{
+			MaxAge: 48 * time.Hour, Severity: "warning", Cooldown: 24 * time.Hour,
+		},
 	}
 }
 
@@ -101,6 +127,11 @@ type Alerter struct {
 
 	// Track sustained conditions: maps alert key → first observed time
 	sustained map[string]time.Time
+
+	// Configured host agents → expected report interval, and when the
+	// alerter started (the baseline for agents that have never reported).
+	agents  map[string]time.Duration
+	started time.Time
 }
 
 // NewAlerter creates a new alerter.
@@ -113,7 +144,13 @@ func NewAlerter(c *cache.Cache, s *store.Store, providers []notify.Provider, cfg
 		interval:  30 * time.Second,
 		lastFired: make(map[string]time.Time),
 		sustained: make(map[string]time.Time),
+		started:   time.Now(),
 	}
+}
+
+// SetAgents registers the configured host agents and their report intervals.
+func (a *Alerter) SetAgents(intervals map[string]time.Duration) {
+	a.agents = intervals
 }
 
 // Run starts the alerter evaluation loop.
@@ -135,14 +172,16 @@ func (a *Alerter) Run(ctx context.Context) error {
 }
 
 func (a *Alerter) cleanup(now time.Time) {
-	const maxAge = 6 * time.Hour
+	// lastFired must outlive the longest cooldown or the cooldown is cut short.
+	const firedMaxAge = 24 * time.Hour
+	const sustainedMaxAge = 6 * time.Hour
 	for key, t := range a.lastFired {
-		if now.Sub(t) > maxAge {
+		if now.Sub(t) > firedMaxAge {
 			delete(a.lastFired, key)
 		}
 	}
 	for key, t := range a.sustained {
-		if now.Sub(t) > maxAge {
+		if now.Sub(t) > sustainedMaxAge {
 			delete(a.sustained, key)
 		}
 	}
@@ -404,6 +443,77 @@ func (a *Alerter) evaluate(ctx context.Context) {
 						Timestamp: now,
 					})
 				}
+			}
+		}
+	}
+
+	a.evaluateHosts(ctx, now, snap.Hosts)
+}
+
+func (a *Alerter) evaluateHosts(ctx context.Context, now time.Time, hosts map[string]*model.HostReport) {
+	if c := a.config.AgentStale; c != nil {
+		for name, interval := range a.agents {
+			last := a.started
+			if h, ok := hosts[name]; ok && h.Received != nil && h.Received.At > 0 {
+				last = time.Unix(h.Received.At, 0)
+			}
+			silent := now.Sub(last)
+			if silent <= time.Duration(c.MissedReports)*interval {
+				continue
+			}
+			msg := fmt.Sprintf("[%s] no report for %s (expected every %s)", name, silent.Round(time.Minute), interval)
+			if last.Equal(a.started) {
+				msg = fmt.Sprintf("[%s] has not reported since Glint started %s ago", name, silent.Round(time.Minute))
+			}
+			a.fire(ctx, now, "agent_stale:"+name, c.Cooldown, model.Notification{
+				AlertType: "agent_stale",
+				Severity:  c.Severity,
+				Title:     fmt.Sprintf("Host Agent Silent: %s", name),
+				Message:   msg,
+				Instance:  name,
+				Subject:   name,
+				Timestamp: now,
+			})
+		}
+	}
+
+	for name, h := range hosts {
+		if c := a.config.SecurityUpdates; c != nil && h.Received != nil && h.Received.SecuritySince > 0 {
+			age := now.Sub(time.Unix(h.Received.SecuritySince, 0))
+			if age > c.MaxAge {
+				a.fire(ctx, now, "security_updates:"+name, c.Cooldown, model.Notification{
+					AlertType: "security_updates_pending",
+					Severity:  c.Severity,
+					Title:     fmt.Sprintf("Security Updates Pending: %s", name),
+					Message: fmt.Sprintf("[%s] %d security update(s) pending for %.0fh (%d updates total)",
+						name, h.Updates.Security, age.Hours(), h.Updates.Pending),
+					Instance:  name,
+					Subject:   name,
+					Timestamp: now,
+					Metadata: map[string]string{
+						"security": fmt.Sprintf("%d", h.Updates.Security),
+						"pending":  fmt.Sprintf("%d", h.Updates.Pending),
+					},
+				})
+			}
+		}
+
+		if c := a.config.RebootRequired; c != nil && h.Reboot.Required && h.Reboot.Since > 0 {
+			age := now.Sub(time.Unix(h.Reboot.Since, 0))
+			if age > c.MaxAge {
+				msg := fmt.Sprintf("[%s] reboot required for %.0fh", name, age.Hours())
+				if len(h.Reboot.Packages) > 0 {
+					msg += " (" + strings.Join(h.Reboot.Packages, ", ") + ")"
+				}
+				a.fire(ctx, now, "reboot_required:"+name, c.Cooldown, model.Notification{
+					AlertType: "reboot_required",
+					Severity:  c.Severity,
+					Title:     fmt.Sprintf("Reboot Required: %s", name),
+					Message:   msg,
+					Instance:  name,
+					Subject:   name,
+					Timestamp: now,
+				})
 			}
 		}
 	}

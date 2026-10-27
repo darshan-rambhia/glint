@@ -130,6 +130,66 @@
                 }
             }
         },
+        "/api/v1/agents/report": {
+            "post": {
+                "description": "Accepts a signed report from `glint agent`. Requests must carry X-Glint-Agent, X-Glint-Timestamp, X-Glint-Nonce and X-Glint-Signature headers (HMAC-SHA256, see docs/agent.md).",
+                "consumes": [
+                    "application/json"
+                ],
+                "summary": "Ingest a host agent report",
+                "parameters": [
+                    {
+                        "description": "Host report",
+                        "name": "report",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.HostReport"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Accepted"
+                    },
+                    "400": {
+                        "description": "Malformed report",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "401": {
+                        "description": "Authentication failed",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "413": {
+                        "description": "Report too large",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/widget": {
+            "get": {
+                "description": "Returns cluster summary statistics for homepage-style dashboard widgets (Homepage, Glance, Dashy, etc.)",
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "Dashboard widget data",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/api.widgetResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/fragments/backups": {
             "get": {
                 "description": "Returns HTML fragment of PBS backup status for htmx",
@@ -196,6 +256,23 @@
                 }
             }
         },
+        "/fragments/events": {
+            "get": {
+                "description": "Returns HTML fragment of PBS server-side task events for htmx",
+                "produces": [
+                    "text/html"
+                ],
+                "summary": "Events fragment",
+                "responses": {
+                    "200": {
+                        "description": "HTML fragment",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/fragments/guests": {
             "get": {
                 "description": "Returns HTML fragment of guest (LXC/QEMU) table for htmx",
@@ -203,6 +280,23 @@
                     "text/html"
                 ],
                 "summary": "Guest table fragment",
+                "responses": {
+                    "200": {
+                        "description": "HTML fragment",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/fragments/hosts": {
+            "get": {
+                "description": "Returns HTML fragment of host agent update/reboot status for htmx",
+                "produces": [
+                    "text/html"
+                ],
+                "summary": "Host agents fragment",
                 "responses": {
                     "200": {
                         "description": "HTML fragment",
@@ -348,6 +442,285 @@
         }
     },
     "definitions": {
+        "api.widgetBackupStats": {
+            "type": "object",
+            "properties": {
+                "last_backup_time": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "api.widgetCPUStats": {
+            "type": "object",
+            "properties": {
+                "usage_pct": {
+                    "type": "number"
+                }
+            }
+        },
+        "api.widgetDiskStats": {
+            "type": "object",
+            "properties": {
+                "failed": {
+                    "type": "integer"
+                },
+                "passed": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "unknown": {
+                    "type": "integer"
+                },
+                "warning": {
+                    "type": "integer"
+                }
+            }
+        },
+        "api.widgetGuestStats": {
+            "type": "object",
+            "properties": {
+                "lxc": {
+                    "type": "integer"
+                },
+                "running": {
+                    "type": "integer"
+                },
+                "stopped": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "vms": {
+                    "type": "integer"
+                }
+            }
+        },
+        "api.widgetHostStats": {
+            "type": "object",
+            "properties": {
+                "pending_updates": {
+                    "type": "integer"
+                },
+                "reboot_required": {
+                    "type": "integer"
+                },
+                "security_updates": {
+                    "type": "integer"
+                },
+                "stale": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "api.widgetMemStats": {
+            "type": "object",
+            "properties": {
+                "total_bytes": {
+                    "type": "integer"
+                },
+                "usage_pct": {
+                    "type": "number"
+                },
+                "used_bytes": {
+                    "type": "integer"
+                }
+            }
+        },
+        "api.widgetNodeStats": {
+            "type": "object",
+            "properties": {
+                "offline": {
+                    "type": "integer"
+                },
+                "online": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "api.widgetResponse": {
+            "type": "object",
+            "properties": {
+                "backups": {
+                    "$ref": "#/definitions/api.widgetBackupStats"
+                },
+                "cpu": {
+                    "$ref": "#/definitions/api.widgetCPUStats"
+                },
+                "disks": {
+                    "$ref": "#/definitions/api.widgetDiskStats"
+                },
+                "guests": {
+                    "$ref": "#/definitions/api.widgetGuestStats"
+                },
+                "hosts": {
+                    "$ref": "#/definitions/api.widgetHostStats"
+                },
+                "memory": {
+                    "$ref": "#/definitions/api.widgetMemStats"
+                },
+                "nodes": {
+                    "$ref": "#/definitions/api.widgetNodeStats"
+                }
+            }
+        },
+        "model.HostKernel": {
+            "type": "object",
+            "properties": {
+                "newest_installed": {
+                    "type": "string"
+                },
+                "running": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.HostOS": {
+            "type": "object",
+            "properties": {
+                "arch": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "pretty_name": {
+                    "type": "string"
+                },
+                "version_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.HostPackage": {
+            "type": "object",
+            "properties": {
+                "from": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "origin": {
+                    "type": "string"
+                },
+                "security": {
+                    "type": "boolean"
+                },
+                "to": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.HostReboot": {
+            "type": "object",
+            "properties": {
+                "packages": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "required": {
+                    "type": "boolean"
+                },
+                "since": {
+                    "type": "integer"
+                }
+            }
+        },
+        "model.HostReceived": {
+            "type": "object",
+            "properties": {
+                "at": {
+                    "type": "integer"
+                },
+                "interval_secs": {
+                    "description": "expected report interval",
+                    "type": "integer"
+                },
+                "security_since": {
+                    "description": "first report with security \u003e 0",
+                    "type": "integer"
+                }
+            }
+        },
+        "model.HostReport": {
+            "type": "object",
+            "properties": {
+                "agent": {
+                    "type": "string"
+                },
+                "agent_version": {
+                    "type": "string"
+                },
+                "collected_at": {
+                    "type": "integer"
+                },
+                "errors": {
+                    "description": "collection steps that failed",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "hostname": {
+                    "type": "string"
+                },
+                "kernel": {
+                    "$ref": "#/definitions/model.HostKernel"
+                },
+                "os": {
+                    "$ref": "#/definitions/model.HostOS"
+                },
+                "reboot": {
+                    "$ref": "#/definitions/model.HostReboot"
+                },
+                "received": {
+                    "$ref": "#/definitions/model.HostReceived"
+                },
+                "updates": {
+                    "$ref": "#/definitions/model.HostUpdates"
+                },
+                "uptime_secs": {
+                    "type": "integer"
+                }
+            }
+        },
+        "model.HostUpdates": {
+            "type": "object",
+            "properties": {
+                "lists_updated_at": {
+                    "type": "integer"
+                },
+                "packages": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.HostPackage"
+                    }
+                },
+                "pending": {
+                    "type": "integer"
+                },
+                "security": {
+                    "type": "integer"
+                },
+                "unattended_last_run": {
+                    "type": "integer"
+                }
+            }
+        },
         "model.SparklinePoint": {
             "type": "object",
             "properties": {

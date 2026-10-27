@@ -508,3 +508,73 @@ func TestNew_WritesToDisk(t *testing.T) {
 	_, err = os.Stat(dbPath)
 	assert.NoError(t, err)
 }
+
+func hostReport(agent string, at int64, pending, security int, reboot bool) *model.HostReport {
+	return &model.HostReport{
+		Agent:    agent,
+		Hostname: agent + "-host",
+		Updates: model.HostUpdates{
+			Pending:  pending,
+			Security: security,
+			Packages: []model.HostPackage{{Name: "openssl", Security: true}},
+		},
+		Reboot:   model.HostReboot{Required: reboot},
+		Received: &model.HostReceived{At: at, SecuritySince: at - 10, Interval: 3600},
+	}
+}
+
+func TestSaveAndLoadHostReports(t *testing.T) {
+	s := newTestStore(t)
+	require.NoError(t, s.SaveHostReport(hostReport("edge", 100, 3, 1, true)))
+	require.NoError(t, s.SaveHostReport(hostReport("edge", 200, 2, 0, false)))
+	require.NoError(t, s.SaveHostReport(hostReport("pve", 150, 0, 0, false)))
+
+	got, err := s.LoadHostReports()
+	require.NoError(t, err)
+	require.Len(t, got, 2)
+	assert.Equal(t, int64(200), got["edge"].Received.At, "latest report wins")
+	assert.Equal(t, int64(190), got["edge"].Received.SecuritySince)
+	assert.Equal(t, "openssl", got["edge"].Updates.Packages[0].Name)
+
+	var history, reboots int
+	require.NoError(t, s.db.QueryRow(`SELECT COUNT(*), SUM(reboot_required) FROM host_reports WHERE agent = 'edge'`).Scan(&history, &reboots))
+	assert.Equal(t, 2, history)
+	assert.Equal(t, 1, reboots)
+}
+
+func TestSaveHostReport_RequiresReceived(t *testing.T) {
+	s := newTestStore(t)
+	r := hostReport("edge", 1, 0, 0, false)
+	r.Received = nil
+	assert.ErrorContains(t, s.SaveHostReport(r), "missing received metadata")
+}
+
+func TestHostReports_ClosedDB(t *testing.T) {
+	s := newTestStore(t)
+	require.NoError(t, s.Close())
+	assert.Error(t, s.SaveHostReport(hostReport("edge", 1, 0, 0, false)))
+	_, err := s.LoadHostReports()
+	assert.Error(t, err)
+}
+
+func TestSaveHostReport_UpsertFailure(t *testing.T) {
+	s := newTestStore(t)
+	_, err := s.db.Exec(`DROP TABLE host_agents`)
+	require.NoError(t, err)
+	assert.ErrorContains(t, s.SaveHostReport(hostReport("edge", 1, 0, 0, false)), "upserting host agent")
+}
+
+func TestSaveHostReport_HistoryFailure(t *testing.T) {
+	s := newTestStore(t)
+	_, err := s.db.Exec(`DROP TABLE host_reports`)
+	require.NoError(t, err)
+	assert.ErrorContains(t, s.SaveHostReport(hostReport("edge", 1, 0, 0, false)), "inserting host report")
+}
+
+func TestLoadHostReports_CorruptRow(t *testing.T) {
+	s := newTestStore(t)
+	_, err := s.db.Exec(`INSERT INTO host_agents (name, received_at, report_json) VALUES ('edge', 1, 'not json')`)
+	require.NoError(t, err)
+	_, err = s.LoadHostReports()
+	assert.ErrorContains(t, err, "decoding host report edge")
+}
